@@ -425,6 +425,23 @@ html {
     animation: dropIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* OS dropdown option staggered entrance */
+@keyframes optionSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.os-option-item {
+    opacity: 0;
+    animation: optionSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Button press effect */
 .btn-press {
     transition: transform 0.1s ease;

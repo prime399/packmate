@@ -6,7 +6,7 @@ import { ChevronDown } from 'lucide-react';
 import { OSIcon } from './OSIcon';
 import { operatingSystems, OSId, getOSById } from '@/lib/data';
 
-// Requirements: 2.1, 2.2, 2.3 - OS selector dropdown with portal rendering
+// Requirements: 2.1, 2.2, 2.3 - OS selector dropdown with portal rendering and staggered animations
 
 interface OSSelectorProps {
   selectedOS: OSId;
@@ -72,7 +72,7 @@ export function OSSelector({ selectedOS, onSelect }: OSSelectorProps) {
       <button
         ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--bg-secondary)] hover:bg-[var(--bg-hover)] border border-[var(--border-primary)] transition-all duration-200 hover:shadow-sm"
         style={{ borderLeftColor: currentOS?.color, borderLeftWidth: 3 }}
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -85,7 +85,7 @@ export function OSSelector({ selectedOS, onSelect }: OSSelectorProps) {
         </span>
         <ChevronDown 
           size={16} 
-          className={`text-[var(--text-muted)] transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`text-[var(--text-muted)] transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
@@ -101,19 +101,27 @@ export function OSSelector({ selectedOS, onSelect }: OSSelectorProps) {
           role="listbox"
         >
           <div className="bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-lg overflow-hidden">
-            {operatingSystems.map((os) => (
+            {operatingSystems.map((os, index) => (
               <button
                 key={os.id}
                 onClick={() => handleSelect(os.id)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--bg-hover)] transition-colors ${
+                className={`os-option-item group w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[var(--bg-hover)] transition-all duration-150 ${
                   os.id === selectedOS ? 'bg-[var(--bg-tertiary)]' : ''
                 }`}
-                style={{ borderLeftColor: os.color, borderLeftWidth: 3 }}
+                style={{ 
+                  borderLeftColor: os.color, 
+                  borderLeftWidth: 3,
+                  animationDelay: `${index * 30}ms`
+                }}
                 role="option"
                 aria-selected={os.id === selectedOS}
               >
-                <OSIcon iconUrl={os.iconUrl} name={os.name} size={18} />
-                <span className="text-sm text-[var(--text-primary)]">{os.name}</span>
+                <span className="transition-transform duration-150 group-hover:scale-110">
+                  <OSIcon iconUrl={os.iconUrl} name={os.name} size={18} />
+                </span>
+                <span className="text-sm text-[var(--text-primary)] transition-transform duration-150 group-hover:translate-x-0.5">
+                  {os.name}
+                </span>
               </button>
             ))}
           </div>
