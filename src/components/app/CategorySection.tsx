@@ -1,6 +1,7 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useRef, useLayoutEffect, useEffect } from 'react';
+import gsap from 'gsap';
 import { CategoryHeader } from './CategoryHeader';
 import { AppItem } from './AppItem';
 import { AppData, Category, OSId, getCategoryColor } from '@/lib/data';
@@ -33,6 +34,60 @@ export const CategorySection = memo(function CategorySection({
   onTooltipEnter,
   onTooltipLeave,
 }: CategorySectionProps) {
+  // Animation refs for GSAP
+  // Requirements: 3.5, 5.2 - Track animation state and filter changes
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const hasAnimated = useRef(false);
+  const prevAppCount = useRef(categoryApps.length);
+
+  // Initial entrance animation
+  // Requirements: 3.1, 3.2, 3.3, 3.4, 6.1, 6.3 - Animate category header and app items
+  useLayoutEffect(() => {
+    if (!sectionRef.current || hasAnimated.current) return;
+    hasAnimated.current = true;
+
+    const section = sectionRef.current;
+    const header = section.querySelector('.category-header');
+    const items = section.querySelectorAll('.app-item');
+
+    requestAnimationFrame(() => {
+      // Set initial state with GPU acceleration
+      gsap.set(header, { clipPath: 'inset(0 100% 0 0)' });
+      gsap.set(items, { y: -15, opacity: 0, force3D: true });
+
+      // Staggered delay based on category index
+      const delay = categoryIndex * 0.05;
+
+      // Animate header with clip-path reveal
+      gsap.to(header, {
+        clipPath: 'inset(0 0% 0 0)',
+        duration: 0.6,
+        ease: 'power2.out',
+        delay: delay + 0.05
+      });
+
+      // Animate items with translateY and opacity
+      gsap.to(items, {
+        y: 0,
+        opacity: 1,
+        duration: 0.5,
+        ease: 'power2.out',
+        delay: delay + 0.1,
+        force3D: true
+      });
+    });
+  }, [categoryIndex]);
+
+  // Handle app count changes (filter changes)
+  // Requirements: 5.1, 5.3 - Reset item visibility when app count changes
+  useEffect(() => {
+    if (categoryApps.length !== prevAppCount.current && sectionRef.current) {
+      const items = sectionRef.current.querySelectorAll('.app-item');
+      gsap.set(items, { y: 0, opacity: 1, clearProps: 'all' });
+    }
+    prevAppCount.current = categoryApps.length;
+  }, [categoryApps.length]);
+
   const color = getCategoryColor(category);
   
   // Count selected apps in this category
@@ -53,6 +108,7 @@ export const CategorySection = memo(function CategorySection({
 
   return (
     <div 
+      ref={sectionRef}
       className="bg-[var(--bg-secondary)] rounded-lg p-2 stagger-item"
       style={{ animationDelay: `${categoryIndex * 50}ms` }}
     >

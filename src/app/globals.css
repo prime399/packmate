@@ -458,22 +458,27 @@ html {
 }
 
 /* ===== ENTRANCE ANIMATION INITIAL STATES ===== */
-/* These prevent the flash of content before animations run */
+/* Initial hidden states for GSAP animations - prevents flash of unstyled content */
+/* Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 6.2 */
 
+/* Requirement 4.1: Category header initial state - hidden via clip-path */
 .category-header {
     clip-path: inset(0 100% 0 0);
 }
 
+/* Requirement 4.2: App item initial state - hidden and offset */
 .app-item {
     opacity: 0;
     transform: translateY(-20px);
     will-change: transform, opacity;
 }
 
+/* Requirement 4.3: Header animate initial state - hidden via clip-path */
 .header-animate {
     clip-path: inset(0 100% 0 0);
 }
 
+/* Requirement 4.4: Header controls initial state - hidden and offset */
 .header-controls {
     opacity: 0;
     transform: translateY(-10px);

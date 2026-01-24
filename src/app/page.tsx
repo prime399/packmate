@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useLayoutEffect, useRef } from 'react';
 import { Package } from 'lucide-react';
+import gsap from 'gsap';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { usePackmateInit } from '@/hooks/usePackmateInit';
 import { useTooltip } from '@/hooks/useTooltip';
@@ -32,6 +33,50 @@ function HomeContent() {
 
   const { tooltip, showTooltip, hideTooltip } = useTooltip();
   
+  // Header animation ref
+  const headerRef = useRef<HTMLElement>(null);
+
+  // Header entrance animations - Requirements 2.1, 2.2, 2.3, 2.4, 2.5
+  useLayoutEffect(() => {
+    if (!headerRef.current || !isHydrated) return;
+
+    const header = headerRef.current;
+    const title = header.querySelector('.header-animate');
+    const controls = header.querySelector('.header-controls');
+
+    // Clip-path reveal for logo/title
+    if (title) {
+      gsap.fromTo(title,
+        { clipPath: 'inset(0 100% 0 0)' },
+        {
+          clipPath: 'inset(0 0% 0 0)',
+          duration: 0.8,
+          ease: 'power2.out',
+          delay: 0.1,
+          force3D: true,
+          onComplete: () => {
+            gsap.set(title, { clipPath: 'none' });
+          }
+        }
+      );
+    }
+
+    // Fade-in for controls
+    if (controls) {
+      gsap.fromTo(controls,
+        { opacity: 0, y: -10 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.6,
+          ease: 'power2.out',
+          delay: 0.3,
+          force3D: true
+        }
+      );
+    }
+  }, [isHydrated]);
+
   // Track expanded state for each category
   const [expandedCategories, setExpandedCategories] = useState<Set<Category>>(
     () => new Set(categories)
@@ -54,17 +99,6 @@ function HomeContent() {
   const packedColumns = useMemo(() => packCategories(categories, 5), []);
   const packedColumnsMobile = useMemo(() => packCategories(categories, 2), []);
 
-  // Trigger entrance animations after hydration
-  useEffect(() => {
-    if (isHydrated) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        // Animation ready - could be used for GSAP animations
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [isHydrated]);
-
   if (!isHydrated) {
     return (
       <div className="min-h-screen bg-[var(--bg-primary)]">
@@ -83,11 +117,11 @@ function HomeContent() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)]">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-primary)]">
+      <header ref={headerRef} className="sticky top-0 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-primary)]">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Logo and Tagline */}
-            <div className="flex items-center gap-3">
+            <div className="header-animate flex items-center gap-3">
               <div className="p-2 rounded-lg bg-[var(--bg-secondary)]">
                 <Package size={24} className="text-[var(--text-primary)]" />
               </div>
@@ -98,7 +132,7 @@ function HomeContent() {
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-4 flex-wrap">
+            <div className="header-controls flex items-center gap-4 flex-wrap">
               <HowItWorks />
               <ContributeLink />
               <GitHubLink />
