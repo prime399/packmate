@@ -720,3 +720,37 @@ body.theme-flash::after {
 .collapse-content.expanded {
     opacity: 1;
 }
+
+
+/* ===== COMMAND FOOTER ANIMATION ===== */
+/* Slide up animation for command footer */
+
+@keyframes footerSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Command scroll styling */
+.command-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-secondary) transparent;
+}
+
+.command-scroll::-webkit-scrollbar {
+    height: 4px;
+}
+
+.command-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.command-scroll::-webkit-scrollbar-thumb {
+    background: var(--border-secondary);
+    border-radius: 2px;
+}

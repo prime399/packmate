@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { apps, categories, OSId, getAppsByCategory, isAppAvailableForOS } from '@/lib/data';
+import { apps, categories, OSId, PackageManagerId, getAppsByCategory, isAppAvailableForOS, isAppAvailableForPackageManager, getPackageManagersByOS } from '@/lib/data';
 
 // Feature: packmate-skeleton-ui
 // Property 4: Category Section Toggle - **Validates: Requirements 5.3**
 // Property 5: App Item Selection Toggle - **Validates: Requirements 6.2**
 // Property 6: Category Selection Count Accuracy - **Validates: Requirements 5.4**
-// Property 9: App Availability Filtering - **Validates: Requirements 6.6**
+// Feature: package-manager-integration
+// Property 4: App Availability Based on Targets - **Validates: Requirements 3.1, 8.2**
 
 describe('Category Section Toggle', () => {
   // Property 4: Clicking header should toggle expanded state
@@ -96,19 +97,47 @@ describe('Category Selection Count Accuracy', () => {
   });
 });
 
-describe('App Availability Filtering', () => {
-  // Property 9: App should be unavailable iff availability flag is false
-  it('app availability should match OS availability flag', () => {
+describe('Feature: package-manager-integration, Property 10: Category count matches available apps', () => {
+  // Property 10: Category count matches available apps
+  // For any category and package manager, the count displayed in the category badge
+  // SHALL equal the number of apps in that category that have a target for the selected package manager.
+  // **Validates: Requirements 3.4**
+  it('category available count should match apps with targets for selected package manager', () => {
+    const allPackageManagerIds: PackageManagerId[] = [
+      'winget', 'chocolatey', 'scoop',
+      'homebrew', 'macports',
+      'apt', 'dnf', 'pacman', 'zypper', 'flatpak', 'snap'
+    ];
+    
     fc.assert(
       fc.property(
-        fc.integer({ min: 0, max: apps.length - 1 }),
-        fc.constantFrom<OSId>('macos', 'linux', 'windows'),
-        (appIndex, os) => {
-          const app = apps[appIndex];
-          const isAvailable = isAppAvailableForOS(app, os);
+        fc.constantFrom(...categories),
+        fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
+        (category, pmId) => {
+          // Get all apps in this category
+          const categoryApps = getAppsByCategory(category);
           
-          // Should match the availability flag
-          expect(isAvailable).toBe(app.availability[os]);
+          // Calculate available count the same way CategorySection does:
+          // Count apps where isAppAvailable returns true
+          // isAppAvailable checks if app.targets[packageManagerId] exists and is non-empty
+          const availableCount = categoryApps.filter(app => 
+            isAppAvailableForPackageManager(app, pmId)
+          ).length;
+          
+          // Verify by manually counting apps with targets for this package manager
+          const expectedCount = categoryApps.filter(app => {
+            const target = app.targets[pmId];
+            return target !== undefined && target !== '';
+          }).length;
+          
+          // The available count should equal the expected count
+          expect(availableCount).toBe(expectedCount);
+          
+          // Additional invariants:
+          // Available count should never exceed total apps in category
+          expect(availableCount).toBeLessThanOrEqual(categoryApps.length);
+          // Available count should be non-negative
+          expect(availableCount).toBeGreaterThanOrEqual(0);
           
           return true;
         }
@@ -117,18 +146,89 @@ describe('App Availability Filtering', () => {
     );
   });
 
-  it('unavailable apps should have false availability flag', () => {
+  // Additional property: Available count consistency across all package managers for an OS
+  it('available count should be consistent when calculated via different methods', () => {
+    const osIds: OSId[] = ['windows', 'macos', 'linux'];
+    
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...categories),
+        fc.constantFrom<OSId>(...osIds),
+        (category, osId) => {
+          const categoryApps = getAppsByCategory(category);
+          const osPackageManagers = getPackageManagersByOS(osId);
+          
+          // For each package manager of this OS, verify the count calculation
+          for (const pm of osPackageManagers) {
+            const availableCount = categoryApps.filter(app => 
+              isAppAvailableForPackageManager(app, pm.id)
+            ).length;
+            
+            // Count should be between 0 and total apps
+            expect(availableCount).toBeGreaterThanOrEqual(0);
+            expect(availableCount).toBeLessThanOrEqual(categoryApps.length);
+          }
+          
+          return true;
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});
+
+describe('App Availability Filtering', () => {
+  // Property 4: App availability based on targets
+  // For any app and package manager, isAppAvailableForPackageManager returns true
+  // if and only if the app's targets object contains a non-empty string value for that package manager ID
+  // **Validates: Requirements 3.1, 8.2**
+  it('app availability should match targets for package manager', () => {
+    const allPackageManagerIds: PackageManagerId[] = [
+      'winget', 'chocolatey', 'scoop',
+      'homebrew', 'macports',
+      'apt', 'dnf', 'pacman', 'zypper', 'flatpak', 'snap'
+    ];
+    
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: apps.length - 1 }),
+        fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
+        (appIndex, pmId) => {
+          const app = apps[appIndex];
+          const isAvailable = isAppAvailableForPackageManager(app, pmId);
+          
+          // Should be true iff targets has a non-empty string for this package manager
+          const target = app.targets[pmId];
+          const expectedAvailable = target !== undefined && target !== '';
+          
+          expect(isAvailable).toBe(expectedAvailable);
+          
+          return true;
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  // App should be available for OS if it has at least one package manager target for that OS
+  it('app availability for OS should match having at least one package manager target', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 0, max: apps.length - 1 }),
         fc.constantFrom<OSId>('macos', 'linux', 'windows'),
         (appIndex, os) => {
           const app = apps[appIndex];
+          const isAvailable = isAppAvailableForOS(app, os);
           
-          // If app is not available for OS, flag should be false
-          if (!app.availability[os]) {
-            expect(isAppAvailableForOS(app, os)).toBe(false);
-          }
+          // Get package managers for this OS
+          const osPackageManagers = getPackageManagersByOS(os);
+          
+          // App should be available if it has at least one target for any PM of this OS
+          const hasAnyTarget = osPackageManagers.some(pm => 
+            isAppAvailableForPackageManager(app, pm.id)
+          );
+          
+          expect(isAvailable).toBe(hasAnyTarget);
           
           return true;
         }

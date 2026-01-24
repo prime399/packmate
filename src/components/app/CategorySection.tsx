@@ -40,6 +40,14 @@ export const CategorySection = memo(function CategorySection({
     return categoryApps.filter(app => selectedApps.has(app.id)).length;
   }, [categoryApps, selectedApps]);
 
+  // Count available apps in this category based on selected package manager
+  // Requirements: 3.4 - Display badge showing count of available apps
+  const availableCount = useMemo(() => {
+    return categoryApps.filter(app => isAppAvailable(app.id)).length;
+  }, [categoryApps, isAppAvailable]);
+
+  const totalCount = categoryApps.length;
+
   // Calculate max height for collapse animation
   const maxHeight = isExpanded ? `${categoryApps.length * 40 + 20}px` : '0px';
 
@@ -53,6 +61,8 @@ export const CategorySection = memo(function CategorySection({
         isExpanded={isExpanded}
         onToggle={onToggleExpanded}
         selectedCount={selectedCount}
+        availableCount={availableCount}
+        totalCount={totalCount}
         color={color}
       />
       

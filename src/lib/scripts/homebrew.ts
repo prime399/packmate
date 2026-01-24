@@ -1,0 +1,190 @@
+// Homebrew script generator for macOS
+// Requirements: 4.3, 5.1
+
+import {
+  escapeShellString,
+  getSelectedPackages,
+  generateAsciiHeader,
+  generateSharedUtils,
+} from './shared';
+
+/**
+ * Generate Homebrew installation script
+ * Requirements: 4.3, 5.1
+ * 
+ * Handles --cask prefixed packages by grouping them separately into
+ * a `brew install --cask` command.
+ */
+export function generateHomebrewScript(selectedAppIds: Set<string>): string {
+  const packages = getSelectedPackages(selectedAppIds, 'homebrew');
+
+  if (packages.length === 0) {
+    return `#!/bin/bash
+# No packages selected for Homebrew
+echo "No packages selected"
+exit 0
+`;
+  }
+
+  const installCalls = packages
+    .map(({ app, pkg }) => {
+      if (pkg.startsWith('--cask ')) {
+        const caskName = pkg.replace('--cask ', '');
+        return `install_package "${escapeShellString(app.name)}" "${caskName}" "--cask"`;
+      }
+      return `install_package "${escapeShellString(app.name)}" "${pkg}" ""`;
+    })
+    .join('\n');
+
+  return (
+    generateAsciiHeader('Homebrew', packages.length) +
+    generateSharedUtils(packages.length) +
+    `
+# Platform detection
+IS_MACOS=false
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    IS_MACOS=true
+fi
+
+# Safety check: Homebrew should not be run as root
+if [ "$EUID" -eq 0 ]; then
+    error "Homebrew should not be run as root. Please run as a normal user."
+    exit 1
+fi
+
+# Requirement 5.4: Check if package is already installed
+is_installed() {
+    local type=$1
+    local pkg=$2
+    # brew list returns 0 if installed, 1 if not
+    # Use grep -Fxq for exact line matching to handle special chars in names
+    if [ "$type" == "--cask" ]; then
+        brew list --cask 2>/dev/null | grep -Fxq "$pkg"
+    else
+        brew list --formula 2>/dev/null | grep -Fxq "$pkg"
+    fi
+}
+
+install_package() {
+    local name=$1
+    local pkg=$2
+    local type=$3 # "" (formula) or "--cask"
+
+    CURRENT=$((CURRENT + 1))
+
+    # Casks are macOS only
+    if [ "$type" == "--cask" ] && [ "$IS_MACOS" = false ]; then
+        printf "\\r\\033[K\${YELLOW}○\${NC} %s \${DIM}(cask skipped on Linux)\${NC}\\n" "$name"
+        SKIPPED+=("$name")
+        return 0
+    fi
+
+    if is_installed "$type" "$pkg"; then
+        skip "$name"
+        SKIPPED+=("$name")
+        return 0
+    fi
+
+    show_progress $CURRENT $TOTAL "$name"
+    local start=$(date +%s)
+
+    # Construct brew command
+    local cmd="brew install"
+    if [ "$type" == "--cask" ]; then
+        cmd="brew install --cask"
+    fi
+
+    local output
+    if output=$(with_retry $cmd "$pkg" 2>&1); then
+        local elapsed=$(($(date +%s) - start))
+        update_avg_time $elapsed
+        printf "\\r\\033[K"
+        timing "$name" "$elapsed"
+        SUCCEEDED+=("$name")
+    else
+        printf "\\r\\033[K\${RED}✗\${NC} %s\\n" "$name"
+
+        # Friendly error messages
+        if echo "$output" | grep -q "No available formula"; then
+            echo -e "    \${DIM}Formula not found\${NC}"
+        elif echo "$output" | grep -q "No Cask with this name"; then
+            echo -e "    \${DIM}Cask not found\${NC}"
+        fi
+
+        FAILED+=("$name")
+    fi
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Pre-flight
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Requirement 5.8: Check if package manager is installed
+command -v brew &>/dev/null || {
+    error "Homebrew not found. Install from https://brew.sh"
+    exit 1
+}
+
+if [ "$IS_MACOS" = true ]; then
+    info "Detected macOS"
+else
+    info "Detected Linux - formulae only (casks will be skipped)"
+fi
+
+info "Updating Homebrew..."
+# Run update silently; on error warn but continue (network flakes shouldn't block install)
+brew update >/dev/null 2>&1 && success "Updated" || warn "Update failed, continuing..."
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Installation
+# ─────────────────────────────────────────────────────────────────────────────
+
+echo
+info "Installing $TOTAL packages"
+echo
+
+${installCalls}
+
+print_summary
+`
+  );
+}
+
+/**
+ * Generate simple one-liner command for Homebrew
+ * Requirement 4.3: Handle --cask prefixed packages by grouping them separately
+ * 
+ * Groups cask packages into a separate `brew install --cask` command
+ * and formula packages into a `brew install` command.
+ */
+export function generateHomebrewCommand(selectedAppIds: Set<string>): string {
+  const packages = getSelectedPackages(selectedAppIds, 'homebrew');
+
+  if (packages.length === 0) {
+    return '# No packages selected';
+  }
+
+  // Separate cask and formula packages
+  const caskPackages: string[] = [];
+  const formulaPackages: string[] = [];
+
+  for (const { pkg } of packages) {
+    if (pkg.startsWith('--cask ')) {
+      caskPackages.push(pkg.replace('--cask ', ''));
+    } else {
+      formulaPackages.push(pkg);
+    }
+  }
+
+  const commands: string[] = [];
+
+  if (formulaPackages.length > 0) {
+    commands.push(`brew install ${formulaPackages.join(' ')}`);
+  }
+
+  if (caskPackages.length > 0) {
+    commands.push(`brew install --cask ${caskPackages.join(' ')}`);
+  }
+
+  return commands.join(' && ');
+}

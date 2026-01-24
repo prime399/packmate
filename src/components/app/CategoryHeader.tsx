@@ -11,6 +11,8 @@ interface CategoryHeaderProps {
   isExpanded: boolean;
   onToggle: () => void;
   selectedCount: number;
+  availableCount: number;
+  totalCount: number;
   color: string;
 }
 
@@ -38,6 +40,8 @@ export const CategoryHeader = memo(function CategoryHeader({
   isExpanded,
   onToggle,
   selectedCount,
+  availableCount,
+  totalCount,
   color,
 }: CategoryHeaderProps) {
   const Icon = categoryIcons[category] || Settings;
@@ -54,6 +58,10 @@ export const CategoryHeader = memo(function CategoryHeader({
       </span>
       <span className="flex-1 text-left text-sm font-medium text-[var(--text-primary)]">
         {category}
+      </span>
+      {/* Requirements: 3.4 - Display badge showing count of available apps */}
+      <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)]">
+        {availableCount} of {totalCount}
       </span>
       {selectedCount > 0 && (
         <span 

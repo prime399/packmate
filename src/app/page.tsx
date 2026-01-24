@@ -7,6 +7,8 @@ import { usePackmateInit } from '@/hooks/usePackmateInit';
 import { useTooltip } from '@/hooks/useTooltip';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { OSSelector } from '@/components/os';
+import { PackageManagerSelector } from '@/components/packageManager';
+import { CommandFooter } from '@/components/command';
 import { HowItWorks, GitHubLink, ContributeLink } from '@/components/header';
 import { CategorySection } from '@/components/app';
 import { Tooltip, LoadingSkeleton } from '@/components/common';
@@ -19,9 +21,12 @@ function HomeContent() {
   const {
     selectedOS,
     setSelectedOS,
+    selectedPackageManager,
+    setSelectedPackageManager,
     selectedApps,
     toggleApp,
     isAppAvailable,
+    selectedCount,
     isHydrated,
   } = usePackmateInit();
 
@@ -99,6 +104,11 @@ function HomeContent() {
               <GitHubLink />
               <div className="h-6 w-px bg-[var(--border-primary)]" />
               <OSSelector selectedOS={selectedOS} onSelect={setSelectedOS} />
+              <PackageManagerSelector 
+                selectedOS={selectedOS}
+                selectedPackageManager={selectedPackageManager}
+                onSelect={setSelectedPackageManager}
+              />
               <ThemeToggle />
             </div>
           </div>
@@ -106,7 +116,8 @@ function HomeContent() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      {/* pb-24 provides space for the fixed CommandFooter when it appears */}
+      <main className="max-w-7xl mx-auto px-4 py-6 pb-24">
         {/* Desktop Layout - 5 columns */}
         <div className="hidden lg:grid lg:grid-cols-5 gap-4">
           {packedColumns.map((columnCategories, colIndex) => (
@@ -161,6 +172,13 @@ function HomeContent() {
           ))}
         </div>
       </main>
+
+      {/* Command Footer - Requirement 6.1: Appears when apps are selected */}
+      <CommandFooter
+        selectedApps={selectedApps}
+        packageManagerId={selectedPackageManager}
+        selectedCount={selectedCount}
+      />
 
       {/* Tooltip */}
       <Tooltip

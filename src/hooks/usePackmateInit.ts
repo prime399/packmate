@@ -1,15 +1,28 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 'react';
-import { OSId, apps, STORAGE_KEYS } from '@/lib/data';
+import { 
+  OSId, 
+  apps, 
+  STORAGE_KEYS, 
+  PackageManagerId, 
+  PackageManager,
+  getPackageManagersByOS,
+  getPrimaryPackageManager,
+} from '@/lib/data';
 
-// Requirements: 2.3, 2.4, 2.5, 2.6, 9.1, 9.2, 9.3, 9.4, 9.5
-// Main state hook for OS selection, app selection, and localStorage persistence
+// Requirements: 2.3, 2.4, 2.5, 2.6, 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.3, 9.4, 9.5
+// Main state hook for OS selection, package manager selection, app selection, and localStorage persistence
 
 interface UsePackmateInitReturn {
   // OS Selection
   selectedOS: OSId;
   setSelectedOS: (os: OSId) => void;
+  
+  // Package Manager Selection (Requirements 8.1, 8.5)
+  selectedPackageManager: PackageManagerId;
+  setSelectedPackageManager: (pm: PackageManagerId) => void;
+  getAvailablePackageManagers: () => PackageManager[];
   
   // App Selection
   selectedApps: Set<string>;
@@ -17,7 +30,7 @@ interface UsePackmateInitReturn {
   clearAll: () => void;
   selectedCount: number;
   
-  // Availability
+  // Availability (Requirement 8.2)
   isAppAvailable: (id: string) => boolean;
   
   // Hydration
@@ -71,6 +84,47 @@ function getInitialApps(): Set<string> {
   return new Set();
 }
 
+// Get localStorage key for package manager based on OS - Requirement 8.3
+function getPackageManagerStorageKey(osId: OSId): string {
+  switch (osId) {
+    case 'windows':
+      return STORAGE_KEYS.PACKAGE_MANAGER_WINDOWS;
+    case 'macos':
+      return STORAGE_KEYS.PACKAGE_MANAGER_MACOS;
+    case 'linux':
+      return STORAGE_KEYS.PACKAGE_MANAGER_LINUX;
+  }
+}
+
+// Get initial package manager from localStorage or OS default - Requirements 8.3, 8.4
+function getInitialPackageManager(osId: OSId): PackageManagerId {
+  if (typeof window === 'undefined') {
+    return getPrimaryPackageManager(osId).id;
+  }
+  
+  try {
+    const storageKey = getPackageManagerStorageKey(osId);
+    const storedPM = localStorage.getItem(storageKey) as PackageManagerId | null;
+    
+    if (storedPM) {
+      // Validate that the stored PM is valid for this OS
+      const availablePMs = getPackageManagersByOS(osId);
+      const isValid = availablePMs.some(pm => pm.id === storedPM);
+      
+      if (isValid) {
+        return storedPM;
+      } else {
+        // Invalid stored PM, log warning and fall back to primary
+        console.warn(`Invalid package manager "${storedPM}" for OS "${osId}", falling back to primary`);
+      }
+    }
+  } catch {
+    // localStorage not available
+  }
+  
+  return getPrimaryPackageManager(osId).id;
+}
+
 // Subscribe to storage changes
 function subscribeToStorage(callback: () => void) {
   window.addEventListener('storage', callback);
@@ -94,6 +148,9 @@ export function usePackmateInit(): UsePackmateInitReturn {
   );
   
   const [selectedOS, setSelectedOSState] = useState<OSId>(storedOS);
+  const [selectedPackageManager, setSelectedPackageManagerState] = useState<PackageManagerId>(
+    () => getInitialPackageManager(storedOS)
+  );
   const [selectedApps, setSelectedApps] = useState<Set<string>>(() => getInitialApps());
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -109,7 +166,7 @@ export function usePackmateInit(): UsePackmateInitReturn {
     }
   }, [storedOS]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Persist OS selection
+  // Persist OS selection and update package manager - Requirements 8.4
   const setSelectedOS = useCallback((os: OSId) => {
     setSelectedOSState(os);
     try {
@@ -117,15 +174,63 @@ export function usePackmateInit(): UsePackmateInitReturn {
     } catch {
       // localStorage not available
     }
+    
+    // When OS changes, restore persisted PM or fall back to primary - Requirement 8.4
+    const newPM = getInitialPackageManager(os);
+    setSelectedPackageManagerState(newPM);
   }, []);
 
-  // Toggle app selection
+  // Set package manager and persist to localStorage - Requirements 8.1, 8.3
+  const setSelectedPackageManager = useCallback((pm: PackageManagerId) => {
+    // Validate that the PM is valid for the current OS
+    const availablePMs = getPackageManagersByOS(selectedOS);
+    const isValid = availablePMs.some(availablePM => availablePM.id === pm);
+    
+    if (!isValid) {
+      console.warn(`Package manager "${pm}" is not valid for OS "${selectedOS}"`);
+      return;
+    }
+    
+    setSelectedPackageManagerState(pm);
+    
+    // Persist to localStorage with OS-specific key - Requirement 8.3
+    try {
+      const storageKey = getPackageManagerStorageKey(selectedOS);
+      localStorage.setItem(storageKey, pm);
+    } catch {
+      // localStorage not available
+    }
+  }, [selectedOS]);
+
+  // Get available package managers for current OS - Requirement 8.5
+  const getAvailablePackageManagers = useCallback((): PackageManager[] => {
+    return getPackageManagersByOS(selectedOS);
+  }, [selectedOS]);
+
+  // Check if app is available for selected package manager - Requirement 8.2
+  // Note: This is defined before toggleApp so it can be used in the dependency array
+  const checkAppAvailable = useCallback((id: string): boolean => {
+    const app = apps.find(a => a.id === id);
+    if (!app) return false;
+    
+    // Check if app has a target for the selected package manager
+    const target = app.targets[selectedPackageManager];
+    return target !== undefined && target !== '';
+  }, [selectedPackageManager]);
+
+  // Toggle app selection - Requirement 3.5: Prevent selecting unavailable apps
   const toggleApp = useCallback((id: string) => {
     setSelectedApps(prev => {
       const next = new Set(prev);
       if (next.has(id)) {
+        // Always allow removing an app from selection
         next.delete(id);
       } else {
+        // Only add if app is available for current package manager - Requirement 3.5
+        if (!checkAppAvailable(id)) {
+          // Skip toggle if app is unavailable - no-op
+          return prev;
+        }
         next.add(id);
       }
       
@@ -138,7 +243,7 @@ export function usePackmateInit(): UsePackmateInitReturn {
       
       return next;
     });
-  }, []);
+  }, [checkAppAvailable]);
 
   // Clear all selections
   const clearAll = useCallback(() => {
@@ -150,12 +255,8 @@ export function usePackmateInit(): UsePackmateInitReturn {
     }
   }, []);
 
-  // Check if app is available for selected OS
-  const isAppAvailable = useCallback((id: string): boolean => {
-    const app = apps.find(a => a.id === id);
-    if (!app) return false;
-    return app.availability[selectedOS];
-  }, [selectedOS]);
+  // Expose checkAppAvailable as isAppAvailable for external use - Requirement 8.2
+  const isAppAvailable = checkAppAvailable;
 
   // Count of selected apps
   const selectedCount = useMemo(() => selectedApps.size, [selectedApps]);
@@ -163,6 +264,9 @@ export function usePackmateInit(): UsePackmateInitReturn {
   return {
     selectedOS,
     setSelectedOS,
+    selectedPackageManager,
+    setSelectedPackageManager,
+    getAvailablePackageManagers,
     selectedApps,
     toggleApp,
     clearAll,
