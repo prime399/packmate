@@ -54,7 +54,7 @@ export const AppItem = memo(function AppItem({
       onMouseLeave={onTooltipLeave}
       className={`w-full flex items-center gap-2 py-1.5 px-1 rounded transition-colors app-item ${
         isAvailable 
-          ? 'hover:bg-[var(--bg-hover)] cursor-pointer' 
+          ? 'hover:bg-(--bg-hover) cursor-pointer' 
           : 'opacity-40 cursor-not-allowed'  // Requirement 3.2: Reduced opacity for unavailable apps
       }`}
       style={{ animationDelay: `${animationDelay}ms` }}
@@ -68,8 +68,8 @@ export const AppItem = memo(function AppItem({
           isSelected 
             ? 'checkbox-pop' 
             : isAvailable
-              ? 'border-[var(--border-secondary)]'
-              : 'border-[var(--border-secondary)] bg-[var(--bg-tertiary)]'  // Disabled checkbox styling
+              ? 'border-(--border-secondary)'
+              : 'border-(--border-secondary) bg-(--bg-tertiary)'  // Disabled checkbox styling
         }`}
         style={{
           backgroundColor: isSelected ? color : undefined,
@@ -87,8 +87,8 @@ export const AppItem = memo(function AppItem({
       {/* App Name */}
       <span className={`text-sm truncate ${
         isAvailable 
-          ? 'text-[var(--text-secondary)]' 
-          : 'text-[var(--text-tertiary)]'  // Requirement 3.2: Dimmed text for unavailable apps
+          ? 'text-(--text-secondary)' 
+          : 'text-(--text-tertiary)'  // Requirement 3.2: Dimmed text for unavailable apps
       }`}>
         {app.name}
       </span>
@@ -97,7 +97,7 @@ export const AppItem = memo(function AppItem({
       {!isAvailable && app.unavailableReason && (
         <AlertCircle 
           size={14} 
-          className="text-[var(--text-tertiary)] ml-auto flex-shrink-0" 
+          className="text-(--text-tertiary) ml-auto shrink-0" 
           aria-label="Not available for selected package manager"
         />
       )}

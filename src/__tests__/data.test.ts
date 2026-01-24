@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { apps, categories, Category, PackageManagerId } from '@/lib/data';
+import { apps, categories, Category } from '@/lib/data';
 
 /**
  * Feature: package-manager-integration, Property 5: Data model integrity
@@ -65,7 +65,7 @@ describe('Feature: package-manager-integration, Property 5: Data model integrity
           
           // Requirement 1.5: Target values contain exact package name or command flags
           // Each target value should be a non-empty string
-          for (const [pmId, packageName] of Object.entries(app.targets)) {
+          for (const packageName of Object.values(app.targets)) {
             expect(typeof packageName).toBe('string');
             expect((packageName as string).length).toBeGreaterThan(0);
           }

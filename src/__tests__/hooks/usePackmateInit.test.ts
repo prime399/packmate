@@ -235,7 +235,7 @@ describe('OS Change Restores Package Manager', () => {
           
           // Simulate switching to intermediate OS (this would trigger reading from its storage)
           const intermediateStorageKey = getPackageManagerStorageKey(intermediateOS);
-          const intermediatePM = localStorage.getItem(intermediateStorageKey);
+          localStorage.getItem(intermediateStorageKey);
           // If no stored PM for intermediate OS, it would use primary (we don't need to verify this)
           
           // Simulate switching back to initial OS
@@ -361,7 +361,7 @@ describe('Unavailable Apps Cannot Be Selected', () => {
           
           // Simulate the toggleApp behavior for each unavailable app
           // Start with an empty selection
-          let selectedApps = new Set<string>();
+          const selectedApps = new Set<string>();
           
           for (const appId of unavailableApps) {
             // Simulate toggleApp logic: only add if available
@@ -402,7 +402,7 @@ describe('Unavailable Apps Cannot Be Selected', () => {
           const isAvailable = isAppAvailableForPM(app.id, pmId);
           
           // Simulate toggleApp behavior
-          let selectedApps = new Set<string>();
+          const selectedApps = new Set<string>();
           
           // Try to toggle (add) the app
           if (!selectedApps.has(app.id)) {
@@ -441,7 +441,7 @@ describe('Unavailable Apps Cannot Be Selected', () => {
           const app = apps[appIndex];
           
           // Start with the app already selected (simulating it was selected before PM change)
-          let selectedApps = new Set<string>([app.id]);
+          const selectedApps = new Set<string>([app.id]);
           
           // Simulate toggleApp to remove - should always work regardless of availability
           if (selectedApps.has(app.id)) {
@@ -470,7 +470,7 @@ describe('Unavailable Apps Cannot Be Selected', () => {
         fc.constantFrom<PackageManagerId>(...allPMIds),
         fc.array(fc.integer({ min: 0, max: apps.length - 1 }), { minLength: 1, maxLength: 10 }),
         (pmId, appIndices) => {
-          let selectedApps = new Set<string>();
+          const selectedApps = new Set<string>();
           
           for (const appIndex of appIndices) {
             const app = apps[appIndex];

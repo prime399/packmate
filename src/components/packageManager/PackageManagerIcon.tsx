@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Package } from 'lucide-react';
 
 // Requirement 2.5 - Package manager icon component with fallback handling
@@ -31,14 +32,13 @@ export function PackageManagerIcon({
   }
 
   return (
-    <img
+    <Image
       src={iconUrl}
       alt={name}
       width={size}
       height={size}
       className={`object-contain ${className}`}
       onError={() => setHasError(true)}
-      loading="lazy"
     />
   );
 }

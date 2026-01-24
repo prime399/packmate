@@ -49,18 +49,18 @@ export const CategoryHeader = memo(function CategoryHeader({
   return (
     <button
       onClick={onToggle}
-      className="w-full flex items-center gap-2 py-2 px-1 rounded-lg hover:bg-[var(--bg-hover)] transition-colors category-header"
+      className="w-full flex items-center gap-2 py-2 px-1 rounded-lg hover:bg-(--bg-hover) transition-colors category-header"
       style={{ borderLeftColor: color, borderLeftWidth: 3, borderLeftStyle: 'solid' }}
       aria-expanded={isExpanded}
     >
       <span style={{ color }}>
         <Icon size={18} />
       </span>
-      <span className="flex-1 text-left text-sm font-medium text-[var(--text-primary)]">
+      <span className="flex-1 text-left text-sm font-medium text-foreground">
         {category}
       </span>
       {/* Requirements: 3.4 - Display badge showing count of available apps */}
-      <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-[var(--bg-tertiary)] text-[var(--text-muted)]">
+      <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-(--bg-tertiary) text-(--text-muted)">
         {availableCount} of {totalCount}
       </span>
       {selectedCount > 0 && (
@@ -73,7 +73,7 @@ export const CategoryHeader = memo(function CategoryHeader({
       )}
       <ChevronDown 
         size={16} 
-        className={`text-[var(--text-muted)] chevron-spring ${isExpanded ? '' : '-rotate-90'}`}
+        className={`text-(--text-muted) chevron-spring ${isExpanded ? '' : '-rotate-90'}`}
       />
     </button>
   );

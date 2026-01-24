@@ -110,13 +110,13 @@ export function CommandFooter({
 
         {/* Command Bar */}
         <div 
-          className="bg-[var(--bg-tertiary)] font-mono text-xs overflow-hidden border-l-4 shadow-2xl rounded-r-lg"
+          className="bg-(--bg-tertiary) font-mono text-xs overflow-hidden border-l-4 shadow-2xl rounded-r-lg"
           style={{ borderLeftColor: pmColor }}
         >
           <div className="flex items-stretch">
             {/* Package Manager Badge (hidden on mobile) */}
             <div
-              className="hidden md:flex items-center gap-2 px-4 py-3 border-r border-[var(--border-primary)]/20 shrink-0"
+              className="hidden md:flex items-center gap-2 px-4 py-3 border-r border-(--border-primary)/20 shrink-0"
               style={{
                 backgroundColor: `color-mix(in srgb, ${pmColor}, transparent 90%)`,
                 color: pmColor,
@@ -134,12 +134,12 @@ export function CommandFooter({
             </div>
 
             {/* Command text - Requirement 6.2 */}
-            <div className="flex-1 min-w-0 flex items-center justify-center px-4 py-4 overflow-hidden bg-[var(--bg-secondary)]">
+            <div className="flex-1 min-w-0 flex items-center justify-center px-4 py-4 overflow-hidden bg-(--bg-secondary)">
               <code 
                 className={`whitespace-nowrap overflow-x-auto leading-none text-sm font-semibold ${
                   selectedCount > 0 
-                    ? 'text-[var(--text-primary)]' 
-                    : 'text-[var(--text-muted)]'
+                    ? 'text-foreground' 
+                    : 'text-(--text-muted)'
                 }`}
                 style={{ scrollbarWidth: 'thin' }}
               >
@@ -151,10 +151,10 @@ export function CommandFooter({
             <button
               onClick={handleDownload}
               disabled={selectedCount === 0}
-              className={`flex items-center gap-2 px-4 py-3 border-l border-[var(--border-primary)]/20 transition-all duration-150 font-sans text-sm ${
+              className={`flex items-center gap-2 px-4 py-3 border-l border-(--border-primary)/20 transition-all duration-150 font-sans text-sm ${
                 selectedCount > 0
-                  ? 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] active:scale-[0.97]'
-                  : 'text-[var(--text-muted)] opacity-50 cursor-not-allowed'
+                  ? 'text-(--text-secondary) hover:text-foreground active:scale-[0.97]'
+                  : 'text-(--text-muted) opacity-50 cursor-not-allowed'
               }`}
               title="Download Script"
               onMouseEnter={(e) => {
@@ -176,12 +176,12 @@ export function CommandFooter({
             <button
               onClick={handleCopy}
               disabled={selectedCount === 0}
-              className={`flex items-center gap-2 px-4 py-3 border-l border-[var(--border-primary)]/20 transition-all duration-150 font-sans text-sm ${
+              className={`flex items-center gap-2 px-4 py-3 border-l border-(--border-primary)/20 transition-all duration-150 font-sans text-sm ${
                 selectedCount > 0
                   ? (copied
                     ? 'text-emerald-400 font-medium'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] active:scale-[0.97]')
-                  : 'text-[var(--text-muted)] opacity-50 cursor-not-allowed'
+                    : 'text-(--text-secondary) hover:text-foreground active:scale-[0.97]')
+                  : 'text-(--text-muted) opacity-50 cursor-not-allowed'
               }`}
               title="Copy Command"
               onMouseEnter={(e) => {

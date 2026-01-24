@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Monitor } from 'lucide-react';
 
 // Requirement 2.1 - OS icon component with fallback handling
@@ -26,14 +27,13 @@ export function OSIcon({ iconUrl, name, size = 20, className = '' }: OSIconProps
   }
 
   return (
-    <img
+    <Image
       src={iconUrl}
       alt={name}
       width={size}
       height={size}
       className={`object-contain ${className}`}
       onError={() => setHasError(true)}
-      loading="lazy"
     />
   );
 }

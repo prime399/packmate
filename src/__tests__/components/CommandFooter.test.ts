@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { apps, PackageManagerId, getPackageManagersByOS, isAppAvailableForPackageManager } from '@/lib/data';
+import { apps, PackageManagerId, isAppAvailableForPackageManager } from '@/lib/data';
+
 
 /**
  * Feature: package-manager-integration, Property 12: Footer visibility based on selection
@@ -85,7 +86,7 @@ describe('Feature: package-manager-integration, Property 12: Footer visibility b
           // Generate a non-empty subset of app IDs
           fc.uniqueArray(fc.constantFrom(...allAppIds), { minLength: 1, maxLength: 20 }),
           fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
-          (selectedIds, pmId) => {
+          (selectedIds, _pmId) => {
             const selectedApps = new Set(selectedIds);
             
             // Simulate that user has made a selection (hasEverHadSelection = true)
@@ -108,7 +109,7 @@ describe('Feature: package-manager-integration, Property 12: Footer visibility b
       fc.assert(
         fc.property(
           fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
-          (pmId) => {
+          (_pmId) => {
             const selectedApps = new Set<string>();
             
             // Simulate that user has made a selection before (hasEverHadSelection = true)
@@ -134,7 +135,7 @@ describe('Feature: package-manager-integration, Property 12: Footer visibility b
           // Can be any selection state (including non-empty, though this shouldn't happen in practice)
           fc.uniqueArray(fc.constantFrom(...allAppIds), { minLength: 0, maxLength: 20 }),
           fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
-          (selectedIds, pmId) => {
+          (selectedIds, _pmId) => {
             const selectedApps = new Set(selectedIds);
             
             // Simulate initial state where user hasn't made any selection yet
@@ -223,7 +224,7 @@ describe('Feature: package-manager-integration, Property 12: Footer visibility b
         fc.property(
           fc.uniqueArray(fc.constantFrom(...allAppIds), { minLength: 1, maxLength: 20 }),
           fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
-          (selectedIds, pmId) => {
+          (selectedIds, _pmId) => {
             const selectedApps = new Set(selectedIds);
             
             // Get visibility state
@@ -280,7 +281,7 @@ describe('Feature: package-manager-integration, Property 12: Footer visibility b
         fc.property(
           fc.constantFrom(...allAppIds),
           fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
-          (appId, pmId) => {
+          (appId, _pmId) => {
             const selectedApps = new Set([appId]);
             
             const state = getFooterVisibilityState(selectedApps, true);
@@ -301,7 +302,7 @@ describe('Feature: package-manager-integration, Property 12: Footer visibility b
       fc.assert(
         fc.property(
           fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
-          (pmId) => {
+          (_pmId) => {
             // Select all apps
             const selectedApps = new Set(allAppIds);
             
@@ -324,10 +325,10 @@ describe('Feature: package-manager-integration, Property 12: Footer visibility b
         fc.property(
           fc.uniqueArray(fc.constantFrom(...allAppIds), { minLength: 1, maxLength: 10 }),
           fc.constantFrom<PackageManagerId>(...allPackageManagerIds),
-          (selectedIds, pmId) => {
+          (selectedIds, _pmId) => {
             // Start with selection
             let selectedApps = new Set(selectedIds);
-            let hasEverHadSelection = true;
+            const hasEverHadSelection = true;
             
             let state = getFooterVisibilityState(selectedApps, hasEverHadSelection);
             expect(state.isVisible).toBe(true);

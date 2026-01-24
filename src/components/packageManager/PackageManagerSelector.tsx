@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown } from 'lucide-react';
 import { PackageManagerIcon } from './PackageManagerIcon';
@@ -35,6 +35,12 @@ export function PackageManagerSelector({
   
   // Get current package manager details
   const currentPackageManager = packageManagers.find(pm => pm.id === selectedPackageManager);
+
+  const handleSelect = useCallback((id: PackageManagerId) => {
+    onSelect(id);
+    setIsOpen(false);
+    setFocusedIndex(-1);
+  }, [onSelect]);
 
   // Calculate dropdown position
   useEffect(() => {
@@ -109,7 +115,8 @@ export function PackageManagerSelector({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, focusedIndex, availablePackageManagers]);
+  }, [isOpen, focusedIndex, availablePackageManagers, handleSelect]); // handleSelect is stable (created in component body but depends on onSelect which is prop)
+
 
   // Reset focused index when dropdown opens
   useEffect(() => {
@@ -121,12 +128,6 @@ export function PackageManagerSelector({
       setFocusedIndex(selectedIndex >= 0 ? selectedIndex : 0);
     }
   }, [isOpen, selectedPackageManager, availablePackageManagers]);
-
-  const handleSelect = (id: PackageManagerId) => {
-    onSelect(id);
-    setIsOpen(false);
-    setFocusedIndex(-1);
-  };
 
   const handleButtonKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

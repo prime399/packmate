@@ -101,8 +101,8 @@ function HomeContent() {
 
   if (!isHydrated) {
     return (
-      <div className="min-h-screen bg-[var(--bg-primary)]">
-        <header className="sticky top-0 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-primary)]">
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-40 bg-background border-(--border-primary)">
           <div className="max-w-7xl mx-auto px-4 py-4">
             <div className="h-10" /> {/* Placeholder for header */}
           </div>
@@ -115,19 +115,19 @@ function HomeContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)]">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header ref={headerRef} className="sticky top-0 z-40 bg-[var(--bg-primary)] border-b border-[var(--border-primary)]">
+      <header ref={headerRef} className="sticky top-0 z-40 bg-background border-b border-(--border-primary)">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             {/* Logo and Tagline */}
             <div className="header-animate flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[var(--bg-secondary)]">
-                <Package size={24} className="text-[var(--text-primary)]" />
+              <div className="p-2 rounded-lg bg-(--bg-secondary)">
+                <Package size={24} className="text-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-[var(--text-primary)]">Packmate</h1>
-                <p className="text-xs text-[var(--text-muted)]">The Cross-Platform Bulk App Installer</p>
+                <h1 className="text-xl font-semibold text-foreground">Packmate</h1>
+                <p className="text-xs text-(--text-muted)">The Cross-Platform Bulk App Installer</p>
               </div>
             </div>
 
@@ -136,7 +136,7 @@ function HomeContent() {
               <HowItWorks />
               <ContributeLink />
               <GitHubLink />
-              <div className="h-6 w-px bg-[var(--border-primary)]" />
+              <div className="h-6 w-px bg-(--border-primary)" />
               <OSSelector selectedOS={selectedOS} onSelect={setSelectedOS} />
               <PackageManagerSelector 
                 selectedOS={selectedOS}

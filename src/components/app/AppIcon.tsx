@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Package } from 'lucide-react';
 
 // Requirement 6.1 - App icon with fallback and loading states
@@ -20,7 +21,7 @@ export function AppIcon({ iconUrl, name, size = 20, className = '' }: AppIconPro
     return (
       <Package 
         size={size} 
-        className={`text-[var(--text-muted)] ${className}`}
+        className={`text-(--text-muted) ${className}`}
         aria-label={name}
       />
     );
@@ -30,10 +31,10 @@ export function AppIcon({ iconUrl, name, size = 20, className = '' }: AppIconPro
     <div className={`relative ${className}`} style={{ width: size, height: size }}>
       {isLoading && (
         <div 
-          className="absolute inset-0 rounded bg-[var(--bg-tertiary)] skeleton-pulse"
+          className="absolute inset-0 rounded bg-(--bg-tertiary) skeleton-pulse"
         />
       )}
-      <img
+      <Image
         src={iconUrl}
         alt={name}
         width={size}
@@ -44,7 +45,6 @@ export function AppIcon({ iconUrl, name, size = 20, className = '' }: AppIconPro
           setIsLoading(false);
           setHasError(true);
         }}
-        loading="lazy"
       />
     </div>
   );

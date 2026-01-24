@@ -109,7 +109,7 @@ export const CategorySection = memo(function CategorySection({
   return (
     <div 
       ref={sectionRef}
-      className="bg-[var(--bg-secondary)] rounded-lg p-2 stagger-item"
+      className="bg-(--bg-secondary) rounded-lg p-2 stagger-item"
       style={{ animationDelay: `${categoryIndex * 50}ms` }}
     >
       <CategoryHeader

@@ -144,7 +144,7 @@ export function CommandDrawer({
         aria-labelledby="drawer-title"
         onKeyDown={handleKeyDown}
         tabIndex={-1}
-        className="fixed z-50 bg-[var(--bg-secondary)] rounded-t-xl md:rounded-lg shadow-2xl
+        className="fixed z-50 bg-(--bg-secondary) rounded-t-xl md:rounded-lg shadow-2xl
           bottom-0 left-0 right-0
           md:bottom-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-3xl md:w-[90vw]"
         style={{
@@ -166,13 +166,13 @@ export function CommandDrawer({
           onTouchEnd={handleTouchEnd}
         >
           <div
-            className="w-12 h-1.5 bg-[var(--text-muted)]/40 rounded-full"
+            className="w-12 h-1.5 bg-(--text-muted)/40 rounded-full"
             onClick={handleClose}
           />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-(--border-primary) bg-(--bg-secondary)">
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
               <div 
@@ -182,11 +182,11 @@ export function CommandDrawer({
               <div>
                 <h3 
                   id="drawer-title" 
-                  className="text-sm font-bold uppercase tracking-wider text-[var(--text-secondary)]"
+                  className="text-sm font-bold uppercase tracking-wider text-(--text-secondary)"
                 >
                   Script Preview
                 </h3>
-                <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                <p className="text-xs text-(--text-muted) mt-0.5">
                   {selectedCount} {selectedCount === 1 ? 'app' : 'apps'} selected • {pmName}
                 </p>
               </div>
@@ -194,7 +194,7 @@ export function CommandDrawer({
           </div>
           <button
             onClick={handleClose}
-            className="p-2 -mr-2 rounded-md hover:bg-[var(--bg-hover)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+            className="p-2 -mr-2 rounded-md hover:bg-(--bg-hover) text-(--text-muted) hover:text-foreground transition-colors"
             aria-label="Close drawer"
           >
             <X className="w-5 h-5" />
@@ -203,14 +203,14 @@ export function CommandDrawer({
 
         {/* Script Preview Content */}
         <div 
-          className="p-4 overflow-y-auto bg-[var(--bg-primary)]/50" 
+          className="p-4 overflow-y-auto bg-(--bg-primary)/50" 
           style={{ maxHeight: 'calc(80vh - 140px)' }}
         >
           {/* Script code block with syntax highlighting */}
-          <div className="bg-[var(--bg-secondary)] rounded-lg border border-[var(--border-primary)] overflow-hidden shadow-sm">
+          <div className="bg-(--bg-secondary) rounded-lg border border-(--border-primary) overflow-hidden shadow-sm">
             {/* Code block header */}
-            <div className="flex items-center justify-between px-4 py-2 bg-[var(--bg-tertiary)] border-b border-[var(--border-primary)]">
-              <span className="text-xs font-mono text-[var(--text-muted)]">
+            <div className="flex items-center justify-between px-4 py-2 bg-(--bg-tertiary) border-b border-(--border-primary)">
+              <span className="text-xs font-mono text-(--text-muted)">
                 {scriptLanguage}
               </span>
 
@@ -218,7 +218,7 @@ export function CommandDrawer({
               <div className="hidden md:flex items-center gap-2">
                 <button
                   onClick={handleDownload}
-                  className="h-8 px-4 flex items-center gap-2 rounded-md hover:bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all text-xs font-medium"
+                  className="h-8 px-4 flex items-center gap-2 rounded-md hover:bg-background text-(--text-muted) hover:text-foreground transition-all text-xs font-medium"
                 >
                   <Download className="w-4 h-4" />
                   <span>Download</span>
@@ -228,7 +228,7 @@ export function CommandDrawer({
                   className={`h-8 px-4 flex items-center gap-2 rounded-md text-xs font-medium transition-all ${
                     copied
                       ? 'shadow-sm'
-                      : 'hover:bg-[var(--bg-primary)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                      : 'hover:bg-background text-(--text-muted) hover:text-foreground'
                   }`}
                   style={{
                     backgroundColor: copied ? pmColor : 'transparent',
@@ -242,8 +242,8 @@ export function CommandDrawer({
             </div>
 
             {/* Script content with line numbers */}
-            <div className="p-4 font-mono text-sm overflow-x-auto bg-[var(--bg-secondary)]">
-              <pre className="text-[var(--text-primary)] whitespace-pre-wrap break-words select-text">
+            <div className="p-4 font-mono text-sm overflow-x-auto bg-(--bg-secondary)">
+              <pre className="text-foreground whitespace-pre-wrap wrap-break-word select-text">
                 <code
                   style={{
                     lineHeight: '1.6',
@@ -258,10 +258,10 @@ export function CommandDrawer({
         </div>
 
         {/* Mobile Actions */}
-        <div className="md:hidden flex items-stretch gap-3 px-4 py-3 border-t border-[var(--border-primary)] bg-[var(--bg-secondary)]">
+        <div className="md:hidden flex items-stretch gap-3 px-4 py-3 border-t border-(--border-primary) bg-(--bg-secondary)">
           <button
             onClick={handleDownload}
-            className="flex-1 h-11 flex items-center justify-center gap-2 rounded-md bg-[var(--bg-tertiary)] border border-[var(--border-primary)] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] active:scale-[0.98] transition-all font-medium text-sm"
+            className="flex-1 h-11 flex items-center justify-center gap-2 rounded-md bg-(--bg-tertiary) border border-(--border-primary) text-(--text-secondary) hover:bg-(--bg-hover) active:scale-[0.98] transition-all font-medium text-sm"
           >
             <Download className="w-4 h-4" />
             Download
@@ -271,7 +271,7 @@ export function CommandDrawer({
             className={`flex-1 h-11 flex items-center justify-center gap-2 rounded-md font-medium text-sm active:scale-[0.98] transition-all shadow-sm ${
               copied
                 ? 'text-black'
-                : 'text-[var(--text-primary)] bg-[var(--bg-tertiary)] border border-[var(--border-primary)]'
+                : 'text-foreground bg-(--bg-tertiary) border border-(--border-primary)'
             }`}
             style={{
               backgroundColor: copied ? pmColor : undefined,
@@ -320,7 +320,6 @@ function highlightLine(line: string, isWindows: boolean): React.ReactNode {
 
   // Highlight keywords and special patterns
   const parts: React.ReactNode[] = [];
-  let remaining = line;
   let keyIndex = 0;
 
   // Shell keywords to highlight
