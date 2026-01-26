@@ -54,7 +54,7 @@ export const CategoryHeader = memo(function CategoryHeader({
     <button
       onClick={onToggle}
       data-nav-id={`category:${category}`}
-      className={`w-full flex items-center gap-2 py-2 px-1 rounded-lg hover:bg-(--bg-hover) transition-colors category-header relative overflow-hidden ${
+      className={`w-full flex items-center gap-2.5 py-2.5 px-1.5 rounded-lg hover:bg-(--bg-hover) transition-colors category-header relative overflow-hidden ${
         // Requirement 1.4, 1.5: Focus ring styling when keyboard navigating
         isFocused && isKeyboardNavigating
           ? 'ring-2 ring-(--accent) ring-offset-1 ring-offset-(--bg-secondary)'
@@ -67,20 +67,20 @@ export const CategoryHeader = memo(function CategoryHeader({
         className="absolute left-0 top-0 bottom-0 w-[3px]"
         style={{ backgroundColor: color }}
       />
-      <span style={{ color }} className="ml-1">
+      <span style={{ color }} className="ml-1.5">
         <Icon size={18} />
       </span>
       <span className="flex-1 text-left text-sm font-medium text-foreground truncate min-w-0">
         {category}
       </span>
       {/* Requirements: 3.4 - Display badge showing count of available apps */}
-      <div className="flex items-center gap-1.5 shrink-0">
-        <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-(--bg-tertiary) text-(--text-muted) whitespace-nowrap">
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-(--bg-tertiary) text-(--text-muted) whitespace-nowrap">
           {availableCount} of {totalCount}
         </span>
         {selectedCount > 0 && (
           <span 
-            className="px-1.5 py-0.5 text-xs font-medium rounded-full text-white whitespace-nowrap"
+            className="px-2 py-0.5 text-xs font-medium rounded-full text-white whitespace-nowrap"
             style={{ backgroundColor: color }}
           >
             {selectedCount}

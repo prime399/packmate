@@ -107,13 +107,13 @@ export const CategorySection = memo(function CategorySection({
 
   const totalCount = categoryApps.length;
 
-  // Calculate max height for collapse animation
-  const maxHeight = isExpanded ? `${categoryApps.length * 40 + 20}px` : '0px';
+  // Calculate max height for collapse animation (increased for larger item padding)
+  const maxHeight = isExpanded ? `${categoryApps.length * 44 + 24}px` : '0px';
 
   return (
     <div 
       ref={sectionRef}
-      className="bg-(--bg-secondary) rounded-lg p-2 stagger-item"
+      className="bg-(--bg-secondary) rounded-lg p-2.5 stagger-item"
       style={{ animationDelay: `${categoryIndex * 50}ms` }}
     >
       <CategoryHeader
@@ -132,7 +132,7 @@ export const CategorySection = memo(function CategorySection({
         className="collapse-content overflow-hidden transition-all duration-300"
         style={{ maxHeight, opacity: isExpanded ? 1 : 0 }}
       >
-        <div className="pt-1">
+        <div className="pt-1.5">
           {categoryApps.map((app, index) => (
             <AppItem
               key={app.id}

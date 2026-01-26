@@ -174,11 +174,11 @@ function HomeContent() {
     return (
       <div className="min-h-screen bg-background">
         <header className="sticky top-0 z-40 bg-background border-(--border-primary)">
-          <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="max-w-7xl mx-auto px-5 py-5">
             <div className="h-10" /> {/* Placeholder for header */}
           </div>
         </header>
-        <main className="max-w-7xl mx-auto px-4 py-6">
+        <main className="max-w-7xl mx-auto px-5 py-7">
           <LoadingSkeleton columns={5} categoriesPerColumn={3} appsPerCategory={4} />
         </main>
       </div>
@@ -189,8 +189,8 @@ function HomeContent() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header ref={headerRef} className="sticky top-0 z-40 bg-background border-b border-(--border-primary)">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-5 py-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
             {/* Logo and Tagline */}
             <div className="header-animate flex items-center gap-3">
               <div className="p-2 rounded-lg bg-(--bg-secondary)">
@@ -203,7 +203,7 @@ function HomeContent() {
             </div>
 
             {/* Controls */}
-            <div className="header-controls flex items-center gap-4 flex-wrap">
+            <div className="header-controls flex items-center gap-5 flex-wrap">
               <HowItWorks ref={howItWorksRef} />
               <ContributeLink />
               <GitHubLink />
@@ -221,12 +221,12 @@ function HomeContent() {
       </header>
 
       {/* Main Content */}
-      {/* pb-24 provides space for the fixed CommandFooter when it appears */}
-      <main className="max-w-7xl mx-auto px-4 py-6 pb-24">
+      {/* pb-28 provides space for the fixed CommandFooter when it appears */}
+      <main className="max-w-7xl mx-auto px-5 py-7 pb-28">
         {/* Desktop Layout - 5 columns */}
-        <div className="hidden lg:grid lg:grid-cols-5 gap-4">
+        <div className="hidden lg:grid lg:grid-cols-5 gap-5">
           {packedColumns.map((columnCategories, colIndex) => (
-            <div key={colIndex} className="flex flex-col gap-4">
+            <div key={colIndex} className="flex flex-col gap-5">
               {columnCategories.map((category, catIndex) => {
                 const categoryApps = getAppsByCategory(category);
                 return (
@@ -253,9 +253,9 @@ function HomeContent() {
         </div>
 
         {/* Mobile/Tablet Layout - 2 columns */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 lg:hidden">
           {packedColumnsMobile.map((columnCategories, colIndex) => (
-            <div key={colIndex} className="flex flex-col gap-4">
+            <div key={colIndex} className="flex flex-col gap-5">
               {columnCategories.map((category, catIndex) => {
                 const categoryApps = getAppsByCategory(category);
                 return (

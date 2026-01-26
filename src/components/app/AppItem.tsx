@@ -59,7 +59,7 @@ export const AppItem = memo(function AppItem({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={onTooltipLeave}
       data-nav-id={`app:${app.id}`}
-      className={`relative w-full flex items-center gap-2 py-1.5 px-2 rounded transition-all duration-150 app-item ${
+      className={`relative w-full flex items-center gap-2.5 py-2 px-2.5 rounded transition-all duration-150 app-item ${
         isAvailable 
           ? 'hover:bg-(--bg-hover) cursor-pointer' 
           : 'opacity-40 cursor-not-allowed'  // Requirement 3.2: Reduced opacity for unavailable apps
