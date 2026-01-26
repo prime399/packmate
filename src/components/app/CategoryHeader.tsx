@@ -54,37 +54,43 @@ export const CategoryHeader = memo(function CategoryHeader({
     <button
       onClick={onToggle}
       data-nav-id={`category:${category}`}
-      className={`w-full flex items-center gap-2 py-2 px-1 rounded-lg hover:bg-(--bg-hover) transition-colors category-header ${
+      className={`w-full flex items-center gap-2 py-2 px-1 rounded-lg hover:bg-(--bg-hover) transition-colors category-header relative overflow-hidden ${
         // Requirement 1.4, 1.5: Focus ring styling when keyboard navigating
         isFocused && isKeyboardNavigating
           ? 'ring-2 ring-(--accent) ring-offset-1 ring-offset-(--bg-secondary)'
           : ''
       }`}
-      style={{ borderLeftColor: color, borderLeftWidth: 3, borderLeftStyle: 'solid' }}
       aria-expanded={isExpanded}
     >
-      <span style={{ color }}>
+      {/* Vertical highlighter - straight line, not affected by rounded corners */}
+      <div 
+        className="absolute left-0 top-0 bottom-0 w-[3px]"
+        style={{ backgroundColor: color }}
+      />
+      <span style={{ color }} className="ml-1">
         <Icon size={18} />
       </span>
-      <span className="flex-1 text-left text-sm font-medium text-foreground">
+      <span className="flex-1 text-left text-sm font-medium text-foreground truncate min-w-0">
         {category}
       </span>
       {/* Requirements: 3.4 - Display badge showing count of available apps */}
-      <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-(--bg-tertiary) text-(--text-muted)">
-        {availableCount} of {totalCount}
-      </span>
-      {selectedCount > 0 && (
-        <span 
-          className="px-1.5 py-0.5 text-xs font-medium rounded-full text-white"
-          style={{ backgroundColor: color }}
-        >
-          {selectedCount}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-(--bg-tertiary) text-(--text-muted) whitespace-nowrap">
+          {availableCount} of {totalCount}
         </span>
-      )}
-      <ChevronDown 
-        size={16} 
-        className={`text-(--text-muted) chevron-spring ${isExpanded ? '' : '-rotate-90'}`}
-      />
+        {selectedCount > 0 && (
+          <span 
+            className="px-1.5 py-0.5 text-xs font-medium rounded-full text-white whitespace-nowrap"
+            style={{ backgroundColor: color }}
+          >
+            {selectedCount}
+          </span>
+        )}
+        <ChevronDown 
+          size={16} 
+          className={`text-(--text-muted) chevron-spring ${isExpanded ? '' : '-rotate-90'}`}
+        />
+      </div>
     </button>
   );
 });

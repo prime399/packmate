@@ -6,7 +6,7 @@ import { generateSimpleCommand, generateInstallScript } from '@/lib/generateInst
 import { getPackageManagerById, type PackageManagerId } from '@/lib/data';
 import { useTheme } from '@/hooks/useTheme';
 import { ShortcutsBar } from './ShortcutsBar';
-import { CommandDrawer } from './CommandDrawer';
+import { TerminalPreviewModal } from './TerminalPreviewModal';
 
 /**
  * CommandFooter Component
@@ -46,7 +46,7 @@ export function CommandFooter({
 }: CommandFooterProps) {
   const [copied, setCopied] = useState(false);
   const [hasEverHadSelection, setHasEverHadSelection] = useState(false);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const initialCountRef = useRef(selectedCount);
 
   // Get package manager details for styling
@@ -108,14 +108,14 @@ export function CommandFooter({
     clearAll();
   }, [clearAll]);
 
-  // Handle preview drawer toggle - Requirement 3.2
-  const handleToggleDrawer = useCallback(() => {
-    setIsDrawerOpen(prev => !prev);
+  // Handle preview modal toggle - Requirement 3.2
+  const handleTogglePreviewModal = useCallback(() => {
+    setIsPreviewModalOpen(prev => !prev);
   }, []);
 
-  // Handle drawer close
-  const handleCloseDrawer = useCallback(() => {
-    setIsDrawerOpen(false);
+  // Handle modal close
+  const handleClosePreviewModal = useCallback(() => {
+    setIsPreviewModalOpen(false);
   }, []);
 
   // Global keyboard shortcuts (vim-like)
@@ -167,11 +167,11 @@ export function CommandFooter({
           handleClearAll();
           break;
         
-        // Requirement 3.8: Tab key for drawer toggle
+        // Requirement 3.8: Tab key for modal toggle
         case 'Tab':
           e.preventDefault(); // Prevent default tab behavior
           if (selectedCount > 0) {
-            handleToggleDrawer();
+            handleTogglePreviewModal();
           }
           break;
       }
@@ -179,7 +179,7 @@ export function CommandFooter({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasEverHadSelection, selectedCount, toggleTheme, handleCopy, handleDownload, handleClearAll, handleToggleDrawer]);
+  }, [hasEverHadSelection, selectedCount, toggleTheme, handleCopy, handleDownload, handleClearAll, handleTogglePreviewModal]);
 
   // Requirement 6.7: Hide footer when no apps selected (and never had selection)
   if (!hasEverHadSelection) {
@@ -240,7 +240,7 @@ export function CommandFooter({
               <div className="flex items-stretch">
                 {/* Requirement 3.2: Preview button */}
                 <button
-                  onClick={handleToggleDrawer}
+                  onClick={handleTogglePreviewModal}
                   disabled={selectedCount === 0}
                   className={`flex items-center gap-2 px-4 py-3 border-r border-(--border-primary)/20 transition-all duration-150 font-sans text-sm ${
                     selectedCount > 0
@@ -263,19 +263,29 @@ export function CommandFooter({
                   <span className="hidden sm:inline whitespace-nowrap">Preview</span>
                 </button>
 
-                {/* Command text - Requirement 6.2 */}
-                <div className="flex-1 min-w-0 flex items-center justify-center px-4 py-4 overflow-hidden bg-(--bg-secondary)">
-                  <code 
-                    className={`whitespace-nowrap overflow-x-auto leading-none text-sm font-semibold ${
+                {/* Command summary - Requirement 2.1, 2.2: Clickable summary showing minified command without horizontal scrollbar */}
+                <button
+                  onClick={handleTogglePreviewModal}
+                  disabled={selectedCount === 0}
+                  className={`flex-1 min-w-0 flex items-center px-4 py-4 bg-(--bg-secondary) transition-all duration-150 overflow-hidden ${
+                    selectedCount > 0
+                      ? 'cursor-pointer hover:bg-(--bg-secondary)/80'
+                      : 'cursor-default'
+                  }`}
+                  title={selectedCount > 0 ? 'Click to preview script (Tab)' : undefined}
+                >
+                  <span 
+                    className={`font-mono text-sm truncate ${
                       selectedCount > 0 
                         ? 'text-foreground' 
                         : 'text-(--text-muted)'
                     }`}
-                    style={{ scrollbarWidth: 'thin' }}
                   >
-                    {selectedCount > 0 ? command : '# No packages selected'}
-                  </code>
-                </div>
+                    {selectedCount > 0 
+                      ? command
+                      : '# No packages selected'}
+                  </span>
+                </button>
 
                 {/* Requirement 3.3: Clear all button */}
                 <button
@@ -355,10 +365,10 @@ export function CommandFooter({
         </div>
       </div>
 
-      {/* CommandDrawer - Requirement 3.2 */}
-      <CommandDrawer
-        isOpen={isDrawerOpen}
-        onClose={handleCloseDrawer}
+      {/* TerminalPreviewModal - Requirement 2.2 */}
+      <TerminalPreviewModal
+        isOpen={isPreviewModalOpen}
+        onClose={handleClosePreviewModal}
         selectedApps={selectedApps}
         packageManagerId={packageManagerId}
         selectedCount={selectedCount}
