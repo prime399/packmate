@@ -1,16 +1,29 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { createPortal } from 'react-dom';
 import { HelpCircle, X } from 'lucide-react';
 
 // Requirement 1.3 - Help link/popup component
 
-export function HowItWorks() {
+export interface HowItWorksRef {
+  open: () => void;
+  close: () => void;
+  toggle: () => void;
+}
+
+export const HowItWorks = forwardRef<HowItWorksRef>(function HowItWorks(_, ref) {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    open: () => setIsOpen(true),
+    close: () => setIsOpen(false),
+    toggle: () => setIsOpen(prev => !prev),
+  }), []);
 
   // Calculate popup position
   useEffect(() => {
@@ -96,4 +109,4 @@ export function HowItWorks() {
       )}
     </>
   );
-}
+});

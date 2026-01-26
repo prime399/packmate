@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import type React from 'react';
 import { type Category } from '@/lib/data';
 
 // Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
@@ -32,6 +33,8 @@ interface UseKeyboardNavigationReturn {
   clearFocus: () => void;
   setFocusByItem: (type: 'category' | 'app', id: string) => void;
   isKeyboardNavigating: boolean;
+  focusSearch: () => void;
+  returnFromSearch: () => void;
 }
 
 /**
@@ -41,19 +44,22 @@ interface UseKeyboardNavigationReturn {
  * - Tracks focus position as (col, row) in the navigation grid
  * - Handles arrow keys (↑↓←→) and vim keys (hjkl) for navigation
  * - Space toggles the focused item's selection state
- * - Escape clears focus
+ * - Escape clears focus or returns from search
+ * - "/" focuses the search bar
  * - Distinguishes keyboard navigation (triggers scroll) from mouse selection (no scroll)
  * - Provides `isKeyboardNavigating` flag for focus ring visibility
  * 
  * @param navItems - 2D array of navigable items organized by columns
  * @param onToggleCategory - Callback when a category is toggled via Space key
  * @param onToggleApp - Callback when an app is toggled via Space key
+ * @param searchInputRef - Optional ref to the search input for "/" shortcut
  * @returns Navigation state and control functions
  */
 export function useKeyboardNavigation(
   navItems: NavItem[][],
   onToggleCategory: (id: string) => void,
-  onToggleApp: (id: string) => void
+  onToggleApp: (id: string) => void,
+  searchInputRef?: React.RefObject<HTMLInputElement | null>
 ): UseKeyboardNavigationReturn {
   // Focus position state - (col, row) in the navigation grid
   const [focusPos, setFocusPos] = useState<FocusPosition | null>(null);
@@ -72,6 +78,42 @@ export function useKeyboardNavigation(
    * Requirement 1.3: Escape key to clear focus
    */
   const clearFocus = useCallback(() => setFocusPos(null), []);
+
+  /**
+   * Store the last focus position before entering search
+   */
+  const lastFocusPosBeforeSearch = useRef<FocusPosition | null>(null);
+
+  /**
+   * Focus the search input (triggered by "/" key)
+   */
+  const focusSearch = useCallback(() => {
+    if (searchInputRef?.current) {
+      // Store current focus position to restore later
+      lastFocusPosBeforeSearch.current = focusPos;
+      searchInputRef.current.focus();
+    }
+  }, [searchInputRef, focusPos]);
+
+  /**
+   * Return focus from search to main section (triggered by Escape in search)
+   */
+  const returnFromSearch = useCallback(() => {
+    if (searchInputRef?.current) {
+      searchInputRef.current.blur();
+    }
+    // Restore previous focus position or start at (0, 0)
+    if (lastFocusPosBeforeSearch.current) {
+      fromKeyboard.current = true;
+      setIsKeyboardNavigating(true);
+      setFocusPos(lastFocusPosBeforeSearch.current);
+      lastFocusPosBeforeSearch.current = null;
+    } else {
+      fromKeyboard.current = true;
+      setIsKeyboardNavigating(true);
+      setFocusPos({ col: 0, row: 0 });
+    }
+  }, [searchInputRef]);
 
   /**
    * Get the currently focused item based on focus position
@@ -101,17 +143,33 @@ export function useKeyboardNavigation(
 
   /**
    * Keyboard event handler
-   * Requirements 1.1, 1.2, 1.3: Handle arrow keys, vim keys, Space, and Escape
+   * Requirements 1.1, 1.2, 1.3: Handle arrow keys, vim keys, Space, Escape, and "/" for search
    */
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Skip if typing in input or textarea
+      const isInSearch = e.target instanceof HTMLInputElement && e.target === searchInputRef?.current;
+      
+      // Handle Escape in search input - return to main section
+      if (isInSearch && e.key === 'Escape') {
+        e.preventDefault();
+        returnFromSearch();
+        return;
+      }
+
+      // Skip other shortcuts if typing in input or textarea
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       // Skip if modifier keys are pressed (prevents conflicts with browser shortcuts)
       if (e.ctrlKey || e.altKey || e.metaKey) return;
 
       const key = e.key;
+
+      // "/" to focus search bar
+      if (key === '/') {
+        e.preventDefault();
+        focusSearch();
+        return;
+      }
 
       // Requirement 1.2: Space to toggle focused item selection
       if (key === ' ') {
@@ -178,7 +236,7 @@ export function useKeyboardNavigation(
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [navItems, focusPos, onToggleCategory, onToggleApp]);
+  }, [navItems, focusPos, onToggleCategory, onToggleApp, focusSearch, returnFromSearch, searchInputRef]);
 
   /**
    * Scroll focused item into view - only when navigating via keyboard
@@ -211,5 +269,7 @@ export function useKeyboardNavigation(
     clearFocus,
     setFocusByItem,
     isKeyboardNavigating,
+    focusSearch,
+    returnFromSearch,
   };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useLayoutEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useLayoutEffect, useRef, useCallback, useEffect } from 'react';
 import { Package } from 'lucide-react';
 import gsap from 'gsap';
 import { ThemeProvider } from '@/hooks/useTheme';
@@ -11,7 +11,7 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { OSSelector } from '@/components/os';
 import { PackageManagerSelector } from '@/components/packageManager';
 import { CommandFooter } from '@/components/command';
-import { HowItWorks, GitHubLink, ContributeLink } from '@/components/header';
+import { HowItWorks, GitHubLink, ContributeLink, type HowItWorksRef } from '@/components/header';
 import { CategorySection } from '@/components/app';
 import { Tooltip, LoadingSkeleton } from '@/components/common';
 import { categories, getAppsByCategory, Category } from '@/lib/data';
@@ -38,6 +38,9 @@ function HomeContent() {
   // Search state for ShortcutsBar
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  // HowItWorks ref for "?" shortcut
+  const howItWorksRef = useRef<HowItWorksRef>(null);
   
   // Header animation ref
   const headerRef = useRef<HTMLElement>(null);
@@ -145,8 +148,27 @@ function HomeContent() {
   } = useKeyboardNavigation(
     navItems,
     handleToggleCategoryFromNav,
-    toggleApp
+    toggleApp,
+    searchInputRef
   );
+
+  // "?" keyboard shortcut to open HowItWorks
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if typing in input or textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Skip if modifier keys are pressed
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
+      
+      if (e.key === '?') {
+        e.preventDefault();
+        howItWorksRef.current?.toggle();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (!isHydrated) {
     return (
@@ -182,7 +204,7 @@ function HomeContent() {
 
             {/* Controls */}
             <div className="header-controls flex items-center gap-4 flex-wrap">
-              <HowItWorks />
+              <HowItWorks ref={howItWorksRef} />
               <ContributeLink />
               <GitHubLink />
               <div className="h-6 w-px bg-(--border-primary)" />
