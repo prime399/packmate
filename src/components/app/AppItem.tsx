@@ -16,6 +16,8 @@ interface AppItemProps {
   onTooltipLeave: () => void;
   color: string;
   animationDelay?: number;
+  isFocused?: boolean;
+  isKeyboardNavigating?: boolean;
 }
 
 export const AppItem = memo(function AppItem({
@@ -27,6 +29,8 @@ export const AppItem = memo(function AppItem({
   onTooltipLeave,
   color,
   animationDelay = 0,
+  isFocused = false,
+  isKeyboardNavigating = false,
 }: AppItemProps) {
   // Requirement 3.3: Show unavailableReason tooltip on hover for unavailable apps
   const handleMouseEnter = useCallback((e: React.MouseEvent) => {
@@ -52,10 +56,16 @@ export const AppItem = memo(function AppItem({
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={onTooltipLeave}
+      data-nav-id={`app:${app.id}`}
       className={`w-full flex items-center gap-2 py-1.5 px-1 rounded transition-colors app-item ${
         isAvailable 
           ? 'hover:bg-(--bg-hover) cursor-pointer' 
           : 'opacity-40 cursor-not-allowed'  // Requirement 3.2: Reduced opacity for unavailable apps
+      } ${
+        // Requirement 1.4, 1.5: Focus ring styling when keyboard navigating
+        isFocused && isKeyboardNavigating
+          ? 'ring-2 ring-(--accent) ring-offset-1 ring-offset-(--bg-secondary)'
+          : ''
       }`}
       style={{ animationDelay: `${animationDelay}ms` }}
       disabled={!isAvailable}

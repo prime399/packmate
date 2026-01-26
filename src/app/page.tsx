@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo, useLayoutEffect, useRef } from 'react';
+import { useState, useMemo, useLayoutEffect, useRef, useCallback } from 'react';
 import { Package } from 'lucide-react';
 import gsap from 'gsap';
 import { ThemeProvider } from '@/hooks/useTheme';
 import { usePackmateInit } from '@/hooks/usePackmateInit';
 import { useTooltip } from '@/hooks/useTooltip';
+import { useKeyboardNavigation, type NavItem } from '@/hooks/useKeyboardNavigation';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { OSSelector } from '@/components/os';
 import { PackageManagerSelector } from '@/components/packageManager';
@@ -29,9 +30,14 @@ function HomeContent() {
     isAppAvailable,
     selectedCount,
     isHydrated,
+    clearAll,
   } = usePackmateInit();
 
-  const { tooltip, showTooltip, hideTooltip } = useTooltip();
+  const { tooltip, show: showTooltip, hide: hideTooltip, tooltipMouseEnter, tooltipMouseLeave, setTooltipRef } = useTooltip();
+  
+  // Search state for ShortcutsBar
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   // Header animation ref
   const headerRef = useRef<HTMLElement>(null);
@@ -98,6 +104,49 @@ function HomeContent() {
   // Use 5 columns on desktop, 2 on mobile (handled via CSS)
   const packedColumns = useMemo(() => packCategories(categories, 5), []);
   const packedColumnsMobile = useMemo(() => packCategories(categories, 2), []);
+
+  // Build navigation items grid for keyboard navigation
+  // Requirement 1.1: Build navItems grid from categories and apps
+  const navItems: NavItem[][] = useMemo(() => {
+    return packedColumns.map(columnCategories => {
+      const items: NavItem[] = [];
+      for (const category of columnCategories) {
+        // Add category header as navigable item
+        items.push({ type: 'category', id: category, category });
+        // Add apps in this category
+        const categoryApps = getAppsByCategory(category);
+        for (const app of categoryApps) {
+          items.push({ type: 'app', id: app.id, category });
+        }
+      }
+      return items;
+    });
+  }, [packedColumns]);
+
+  // Toggle category expansion callback for keyboard navigation
+  const handleToggleCategoryFromNav = useCallback((id: string) => {
+    const category = id as Category;
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  }, []);
+
+  // Keyboard navigation hook
+  // Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6
+  const {
+    focusedItem,
+    isKeyboardNavigating,
+  } = useKeyboardNavigation(
+    navItems,
+    handleToggleCategoryFromNav,
+    toggleApp
+  );
 
   if (!isHydrated) {
     return (
@@ -172,6 +221,8 @@ function HomeContent() {
                     categoryIndex={colIndex * 3 + catIndex}
                     onTooltipEnter={showTooltip}
                     onTooltipLeave={hideTooltip}
+                    focusedItem={focusedItem}
+                    isKeyboardNavigating={isKeyboardNavigating}
                   />
                 );
               })}
@@ -199,6 +250,8 @@ function HomeContent() {
                     categoryIndex={colIndex * 8 + catIndex}
                     onTooltipEnter={showTooltip}
                     onTooltipLeave={hideTooltip}
+                    focusedItem={focusedItem}
+                    isKeyboardNavigating={isKeyboardNavigating}
                   />
                 );
               })}
@@ -212,14 +265,18 @@ function HomeContent() {
         selectedApps={selectedApps}
         packageManagerId={selectedPackageManager}
         selectedCount={selectedCount}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchInputRef={searchInputRef}
+        clearAll={clearAll}
       />
 
       {/* Tooltip */}
       <Tooltip
-        isVisible={tooltip.isVisible}
-        text={tooltip.text}
-        x={tooltip.x}
-        y={tooltip.y}
+        tooltip={tooltip}
+        onMouseEnter={tooltipMouseEnter}
+        onMouseLeave={tooltipMouseLeave}
+        setRef={setTooltipRef}
       />
     </div>
   );

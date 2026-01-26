@@ -20,6 +20,8 @@ interface CategorySectionProps {
   categoryIndex: number;
   onTooltipEnter: (text: string, event: React.MouseEvent) => void;
   onTooltipLeave: () => void;
+  focusedItem?: { type: 'category' | 'app'; id: string } | null;
+  isKeyboardNavigating?: boolean;
 }
 
 export const CategorySection = memo(function CategorySection({
@@ -33,6 +35,8 @@ export const CategorySection = memo(function CategorySection({
   categoryIndex,
   onTooltipEnter,
   onTooltipLeave,
+  focusedItem,
+  isKeyboardNavigating = false,
 }: CategorySectionProps) {
   // Animation refs for GSAP
   // Requirements: 3.5, 5.2 - Track animation state and filter changes
@@ -120,6 +124,8 @@ export const CategorySection = memo(function CategorySection({
         availableCount={availableCount}
         totalCount={totalCount}
         color={color}
+        isFocused={focusedItem?.type === 'category' && focusedItem?.id === category}
+        isKeyboardNavigating={isKeyboardNavigating}
       />
       
       <div 
@@ -138,6 +144,8 @@ export const CategorySection = memo(function CategorySection({
               onTooltipLeave={onTooltipLeave}
               color={color}
               animationDelay={isExpanded ? index * 30 : 0}
+              isFocused={focusedItem?.type === 'app' && focusedItem?.id === app.id}
+              isKeyboardNavigating={isKeyboardNavigating}
             />
           ))}
         </div>

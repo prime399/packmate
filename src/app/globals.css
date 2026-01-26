@@ -759,3 +759,62 @@ body.theme-flash::after {
     background: var(--border-secondary);
     border-radius: 2px;
 }
+
+
+/* ===== COMMAND DRAWER ANIMATION ===== */
+/* Slide up animation for command drawer - Requirement 4.5 */
+
+@keyframes drawerSlideUp {
+    0% {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes drawerSlideDown {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+}
+
+.drawer-slide-up {
+    animation: drawerSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.drawer-slide-down {
+    animation: drawerSlideDown 0.2s ease-out forwards;
+}
+
+/* ===== TOOLTIP FADE TRANSITIONS ===== */
+/* Fade in/out transitions for tooltips - Requirement 5.6 */
+
+.tooltip-fade-enter {
+    opacity: 0;
+    transform: translateY(4px);
+}
+
+.tooltip-fade-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+}
+
+.tooltip-fade-exit {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.tooltip-fade-exit-active {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.1s ease-in, transform 0.1s ease-in;
+}

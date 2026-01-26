@@ -1,2 +1,2 @@
-export { Tooltip } from './Tooltip';
+export { Tooltip, renderTooltipContent, calculateTooltipPosition } from './Tooltip';
 export { LoadingSkeleton } from './LoadingSkeleton';

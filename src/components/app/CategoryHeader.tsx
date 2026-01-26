@@ -14,6 +14,8 @@ interface CategoryHeaderProps {
   availableCount: number;
   totalCount: number;
   color: string;
+  isFocused?: boolean;
+  isKeyboardNavigating?: boolean;
 }
 
 // Map categories to icons
@@ -43,13 +45,21 @@ export const CategoryHeader = memo(function CategoryHeader({
   availableCount,
   totalCount,
   color,
+  isFocused = false,
+  isKeyboardNavigating = false,
 }: CategoryHeaderProps) {
   const Icon = categoryIcons[category] || Settings;
 
   return (
     <button
       onClick={onToggle}
-      className="w-full flex items-center gap-2 py-2 px-1 rounded-lg hover:bg-(--bg-hover) transition-colors category-header"
+      data-nav-id={`category:${category}`}
+      className={`w-full flex items-center gap-2 py-2 px-1 rounded-lg hover:bg-(--bg-hover) transition-colors category-header ${
+        // Requirement 1.4, 1.5: Focus ring styling when keyboard navigating
+        isFocused && isKeyboardNavigating
+          ? 'ring-2 ring-(--accent) ring-offset-1 ring-offset-(--bg-secondary)'
+          : ''
+      }`}
       style={{ borderLeftColor: color, borderLeftWidth: 3, borderLeftStyle: 'solid' }}
       aria-expanded={isExpanded}
     >

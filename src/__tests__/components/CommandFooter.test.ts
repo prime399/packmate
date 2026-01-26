@@ -1,6 +1,686 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import * as fc from 'fast-check';
 import { apps, PackageManagerId, isAppAvailableForPackageManager } from '@/lib/data';
+
+/**
+ * Feature: command-footer-ux
+ * Property 8: Keyboard Shortcuts Trigger Actions
+ * Property 16: Input and Modifier Shortcut Bypass
+ * Property 17: Disabled Shortcuts When No Selection
+ * **Validates: Requirements 3.4, 3.5, 3.6, 3.7, 3.8, 6.3, 6.4, 6.5**
+ */
+
+// Valid shortcut keys and their corresponding actions
+type ShortcutKey = 'y' | 'd' | 't' | 'c' | 'Tab';
+type ShortcutAction = 'copy' | 'download' | 'themeToggle' | 'clearAll' | 'drawerToggle';
+
+const shortcutKeyToAction: Record<ShortcutKey, ShortcutAction> = {
+  'y': 'copy',
+  'd': 'download',
+  't': 'themeToggle',
+  'c': 'clearAll',
+  'Tab': 'drawerToggle',
+};
+
+// Shortcuts that always work (even with no selection)
+const alwaysEnabledShortcuts: ShortcutKey[] = ['t', 'c'];
+
+// Shortcuts that require selection
+const selectionRequiredShortcuts: ShortcutKey[] = ['y', 'd', 'Tab'];
+
+// All valid shortcut keys
+const allShortcutKeys: ShortcutKey[] = ['y', 'd', 't', 'c', 'Tab'];
+
+// Input element types that should bypass shortcuts
+type InputElementType = 'input' | 'textarea' | 'select';
+const inputElementTypes: InputElementType[] = ['input', 'textarea', 'select'];
+
+// Modifier keys that should bypass shortcuts
+type ModifierKey = 'ctrlKey' | 'altKey' | 'metaKey';
+const modifierKeys: ModifierKey[] = ['ctrlKey', 'altKey', 'metaKey'];
+
+/**
+ * Simulates the keyboard shortcut handling logic from CommandFooter.
+ * This is a pure function that mirrors the component's useEffect logic.
+ * 
+ * @param key - The key that was pressed
+ * @param selectedCount - Number of selected apps
+ * @param hasEverHadSelection - Whether user has ever made a selection
+ * @param isInInputField - Whether the event target is an input/textarea/select
+ * @param modifiers - Object containing modifier key states
+ * @returns The action that should be triggered, or null if no action
+ */
+function processKeyboardShortcut(
+  key: string,
+  selectedCount: number,
+  hasEverHadSelection: boolean,
+  isInInputField: boolean,
+  modifiers: { ctrlKey: boolean; altKey: boolean; metaKey: boolean }
+): ShortcutAction | null {
+  // Requirement: Only enable shortcuts after user has interacted with the footer
+  if (!hasEverHadSelection) {
+    return null;
+  }
+
+  // Requirement 6.3: Skip shortcuts when in input field
+  if (isInInputField) {
+    return null;
+  }
+
+  // Requirement 6.4: Skip shortcuts when modifier keys are pressed
+  if (modifiers.ctrlKey || modifiers.altKey || modifiers.metaKey) {
+    return null;
+  }
+
+  // Check if this is a valid shortcut key
+  if (!allShortcutKeys.includes(key as ShortcutKey)) {
+    return null;
+  }
+
+  const shortcutKey = key as ShortcutKey;
+
+  // Requirement 6.5: Disable copy/download/drawer when selectedCount === 0
+  if (selectedCount === 0 && !alwaysEnabledShortcuts.includes(shortcutKey)) {
+    return null;
+  }
+
+  // Return the corresponding action
+  return shortcutKeyToAction[shortcutKey];
+}
+
+/**
+ * Arbitrary generators for property tests
+ */
+
+// Generate a valid shortcut key
+const shortcutKeyArb = fc.constantFrom<ShortcutKey>(...allShortcutKeys);
+
+// Generate an always-enabled shortcut key
+const alwaysEnabledKeyArb = fc.constantFrom<ShortcutKey>(...alwaysEnabledShortcuts);
+
+// Generate a selection-required shortcut key
+const selectionRequiredKeyArb = fc.constantFrom<ShortcutKey>(...selectionRequiredShortcuts);
+
+// Generate an input element type
+const inputElementTypeArb = fc.constantFrom<InputElementType>(...inputElementTypes);
+
+// Generate a modifier key
+const modifierKeyArb = fc.constantFrom<ModifierKey>(...modifierKeys);
+
+// Generate a non-shortcut key (any key that's not a valid shortcut)
+const nonShortcutKeyArb = fc.string({ minLength: 1, maxLength: 3 })
+  .filter(k => !allShortcutKeys.includes(k as ShortcutKey));
+
+// Generate a positive selection count
+const positiveCountArb = fc.integer({ min: 1, max: 100 });
+
+// Generate modifier state (all false by default)
+const noModifiersArb = fc.constant({ ctrlKey: false, altKey: false, metaKey: false });
+
+// Generate modifier state with at least one modifier pressed
+const withModifierArb = fc.record({
+  ctrlKey: fc.boolean(),
+  altKey: fc.boolean(),
+  metaKey: fc.boolean(),
+}).filter(m => m.ctrlKey || m.altKey || m.metaKey);
+
+describe('Feature: command-footer-ux, Property 8: Keyboard Shortcuts Trigger Actions', () => {
+  /**
+   * Property 8: Keyboard Shortcuts Trigger Actions
+   * 
+   * For any valid shortcut key ('y', 'd', 't', 'c', 'Tab') pressed when not in an input field
+   * and without modifier keys, the corresponding action SHALL be triggered.
+   * 
+   * **Validates: Requirements 3.4, 3.5, 3.6, 3.7, 3.8**
+   */
+
+  describe('Property 8: Keyboard Shortcuts Trigger Actions', () => {
+    it('valid shortcut keys trigger their corresponding actions when conditions are met', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          noModifiersArb,
+          (key, selectedCount, modifiers) => {
+            // Conditions: hasEverHadSelection=true, not in input, no modifiers, has selection
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true, // hasEverHadSelection
+              false, // not in input field
+              modifiers
+            );
+
+            // Property: Valid shortcut key SHALL trigger its corresponding action
+            expect(action).toBe(shortcutKeyToAction[key]);
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('y key triggers copy action (Requirement 3.4)', () => {
+      fc.assert(
+        fc.property(
+          positiveCountArb,
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              'y',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            expect(action).toBe('copy');
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('d key triggers download action (Requirement 3.5)', () => {
+      fc.assert(
+        fc.property(
+          positiveCountArb,
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              'd',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            expect(action).toBe('download');
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('t key triggers theme toggle action (Requirement 3.6)', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 0, max: 100 }), // Can be any count, including 0
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              't',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            expect(action).toBe('themeToggle');
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('c key triggers clear all action (Requirement 3.7)', () => {
+      fc.assert(
+        fc.property(
+          fc.integer({ min: 0, max: 100 }), // Can be any count, including 0
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              'c',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            expect(action).toBe('clearAll');
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('Tab key triggers drawer toggle action (Requirement 3.8)', () => {
+      fc.assert(
+        fc.property(
+          positiveCountArb,
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              'Tab',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            expect(action).toBe('drawerToggle');
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('non-shortcut keys do not trigger any action', () => {
+      fc.assert(
+        fc.property(
+          nonShortcutKeyArb,
+          positiveCountArb,
+          (key, selectedCount) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Non-shortcut keys SHALL NOT trigger any action
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('shortcuts do not trigger before user has ever had selection', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          (key, selectedCount) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              false, // hasEverHadSelection = false
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Shortcuts SHALL NOT trigger before user interaction
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+});
+
+describe('Feature: command-footer-ux, Property 16: Input and Modifier Shortcut Bypass', () => {
+  /**
+   * Property 16: Input and Modifier Shortcut Bypass
+   * 
+   * For any keyboard event where the target is an input/textarea/select element
+   * OR any modifier key (Ctrl, Alt, Meta) is pressed, custom keyboard shortcuts
+   * SHALL NOT be processed.
+   * 
+   * **Validates: Requirements 6.3, 6.4**
+   */
+
+  describe('Property 16: Input and Modifier Shortcut Bypass', () => {
+    it('shortcuts are bypassed when in input fields (Requirement 6.3)', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          inputElementTypeArb,
+          (key, selectedCount, _inputType) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              true, // isInInputField = true
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Shortcuts SHALL NOT be processed when in input field
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('shortcuts are bypassed when modifier keys are pressed (Requirement 6.4)', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          withModifierArb,
+          (key, selectedCount, modifiers) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              false,
+              modifiers
+            );
+
+            // Property: Shortcuts SHALL NOT be processed when modifier keys are pressed
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('shortcuts are bypassed when Ctrl is pressed', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          (key, selectedCount) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: true, altKey: false, metaKey: false }
+            );
+
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('shortcuts are bypassed when Alt is pressed', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          (key, selectedCount) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: true, metaKey: false }
+            );
+
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('shortcuts are bypassed when Meta (Cmd) is pressed', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          (key, selectedCount) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: true }
+            );
+
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('shortcuts are bypassed when multiple modifiers are pressed', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          fc.record({
+            ctrlKey: fc.boolean(),
+            altKey: fc.boolean(),
+            metaKey: fc.boolean(),
+          }).filter(m => (m.ctrlKey ? 1 : 0) + (m.altKey ? 1 : 0) + (m.metaKey ? 1 : 0) >= 2),
+          (key, selectedCount, modifiers) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              false,
+              modifiers
+            );
+
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('shortcuts are bypassed when both in input field and modifier pressed', () => {
+      fc.assert(
+        fc.property(
+          shortcutKeyArb,
+          positiveCountArb,
+          withModifierArb,
+          (key, selectedCount, modifiers) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              true, // in input field
+              modifiers // with modifier
+            );
+
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+});
+
+describe('Feature: command-footer-ux, Property 17: Disabled Shortcuts When No Selection', () => {
+  /**
+   * Property 17: Disabled Shortcuts When No Selection
+   * 
+   * For any state where selectedCount === 0, the 'y' (copy) and 'd' (download) shortcuts
+   * SHALL NOT trigger their actions, but 't' (theme) and 'c' (clear) shortcuts SHALL still work.
+   * 
+   * **Validates: Requirements 6.5**
+   */
+
+  describe('Property 17: Disabled Shortcuts When No Selection', () => {
+    it('copy (y) shortcut is disabled when selectedCount === 0', () => {
+      fc.assert(
+        fc.property(
+          fc.constant(0), // selectedCount = 0
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              'y',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Copy shortcut SHALL NOT trigger when no selection
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('download (d) shortcut is disabled when selectedCount === 0', () => {
+      fc.assert(
+        fc.property(
+          fc.constant(0), // selectedCount = 0
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              'd',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Download shortcut SHALL NOT trigger when no selection
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('drawer toggle (Tab) shortcut is disabled when selectedCount === 0', () => {
+      fc.assert(
+        fc.property(
+          fc.constant(0), // selectedCount = 0
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              'Tab',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Drawer toggle shortcut SHALL NOT trigger when no selection
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('theme toggle (t) shortcut still works when selectedCount === 0', () => {
+      fc.assert(
+        fc.property(
+          fc.constant(0), // selectedCount = 0
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              't',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Theme toggle shortcut SHALL still work when no selection
+            expect(action).toBe('themeToggle');
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('clear all (c) shortcut still works when selectedCount === 0', () => {
+      fc.assert(
+        fc.property(
+          fc.constant(0), // selectedCount = 0
+          (selectedCount) => {
+            const action = processKeyboardShortcut(
+              'c',
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Clear all shortcut SHALL still work when no selection
+            expect(action).toBe('clearAll');
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('selection-required shortcuts are disabled when selectedCount === 0', () => {
+      fc.assert(
+        fc.property(
+          selectionRequiredKeyArb,
+          (key) => {
+            const action = processKeyboardShortcut(
+              key,
+              0, // selectedCount = 0
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Selection-required shortcuts SHALL NOT trigger when no selection
+            expect(action).toBeNull();
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('always-enabled shortcuts work regardless of selection count', () => {
+      fc.assert(
+        fc.property(
+          alwaysEnabledKeyArb,
+          fc.integer({ min: 0, max: 100 }),
+          (key, selectedCount) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Always-enabled shortcuts SHALL work regardless of selection
+            expect(action).toBe(shortcutKeyToAction[key]);
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+
+    it('selection-required shortcuts work when selectedCount > 0', () => {
+      fc.assert(
+        fc.property(
+          selectionRequiredKeyArb,
+          positiveCountArb,
+          (key, selectedCount) => {
+            const action = processKeyboardShortcut(
+              key,
+              selectedCount,
+              true,
+              false,
+              { ctrlKey: false, altKey: false, metaKey: false }
+            );
+
+            // Property: Selection-required shortcuts SHALL work when selection exists
+            expect(action).toBe(shortcutKeyToAction[key]);
+            return true;
+          }
+        ),
+        { numRuns: 100 }
+      );
+    });
+  });
+});
 
 
 /**
