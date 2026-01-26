@@ -51,27 +51,37 @@ export const AppItem = memo(function AppItem({
     // No-op for unavailable apps - interaction is prevented
   }, [isAvailable, onToggle]);
 
+  const showFocusHighlight = isFocused && isKeyboardNavigating;
+
   return (
     <button
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={onTooltipLeave}
       data-nav-id={`app:${app.id}`}
-      className={`w-full flex items-center gap-2 py-1.5 px-1 rounded transition-colors app-item ${
+      className={`relative w-full flex items-center gap-2 py-1.5 px-2 rounded transition-all duration-150 app-item ${
         isAvailable 
           ? 'hover:bg-(--bg-hover) cursor-pointer' 
           : 'opacity-40 cursor-not-allowed'  // Requirement 3.2: Reduced opacity for unavailable apps
-      } ${
-        // Requirement 1.4, 1.5: Focus ring styling when keyboard navigating
-        isFocused && isKeyboardNavigating
-          ? 'ring-2 ring-(--accent) ring-offset-1 ring-offset-(--bg-secondary)'
-          : ''
       }`}
-      style={{ animationDelay: `${animationDelay}ms` }}
+      style={{ 
+        animationDelay: `${animationDelay}ms`,
+        // Solid background using category accent color when focused during keyboard navigation
+        backgroundColor: showFocusHighlight 
+          ? `color-mix(in srgb, ${color} 25%, transparent)` 
+          : undefined,
+      }}
       disabled={!isAvailable}
       aria-pressed={isSelected}
       aria-disabled={!isAvailable}
     >
+      {/* Vertical highlight line at the start when focused */}
+      {showFocusHighlight && (
+        <span 
+          className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full"
+          style={{ backgroundColor: color }}
+        />
+      )}
       {/* Checkbox - Requirement 3.1: Visual indicator of availability */}
       <div
         className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
