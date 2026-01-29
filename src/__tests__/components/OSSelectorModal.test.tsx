@@ -717,6 +717,7 @@ describe('OSSelectorModal - Unit Tests', () => {
         />
       );
 
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const macOS = operatingSystems.find(os => os.id === 'macos');
       const optionButtons = document.querySelectorAll('button[role="option"]');
       const macOSButton = Array.from(optionButtons).find(

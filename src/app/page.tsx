@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/hooks/useTheme';
 import { usePackmateInit } from '@/hooks/usePackmateInit';
 import { useTooltip } from '@/hooks/useTooltip';
 import { useKeyboardNavigation, type NavItem } from '@/hooks/useKeyboardNavigation';
+import { useVerificationStatus } from '@/hooks/useVerificationStatus';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { OSSelector } from '@/components/os';
 import { PackageManagerSelector } from '@/components/packageManager';
@@ -34,6 +35,9 @@ function HomeContent() {
   } = usePackmateInit();
 
   const { tooltip, show: showTooltip, hide: hideTooltip, tooltipMouseEnter, tooltipMouseLeave, setTooltipRef } = useTooltip();
+  
+  // Verification status hook - Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6
+  const { getStatus: getVerificationStatus } = useVerificationStatus();
   
   // Search state for ShortcutsBar
   const [searchQuery, setSearchQuery] = useState('');
@@ -237,6 +241,7 @@ function HomeContent() {
                     selectedApps={selectedApps}
                     isAppAvailable={isAppAvailable}
                     selectedOS={selectedOS}
+                    selectedPackageManager={selectedPackageManager}
                     toggleApp={toggleApp}
                     isExpanded={expandedCategories.has(category)}
                     onToggleExpanded={() => toggleCategory(category)}
@@ -245,6 +250,7 @@ function HomeContent() {
                     onTooltipLeave={hideTooltip}
                     focusedItem={focusedItem}
                     isKeyboardNavigating={isKeyboardNavigating}
+                    getVerificationStatus={getVerificationStatus}
                   />
                 );
               })}
@@ -266,6 +272,7 @@ function HomeContent() {
                     selectedApps={selectedApps}
                     isAppAvailable={isAppAvailable}
                     selectedOS={selectedOS}
+                    selectedPackageManager={selectedPackageManager}
                     toggleApp={toggleApp}
                     isExpanded={expandedCategories.has(category)}
                     onToggleExpanded={() => toggleCategory(category)}
@@ -274,6 +281,7 @@ function HomeContent() {
                     onTooltipLeave={hideTooltip}
                     focusedItem={focusedItem}
                     isKeyboardNavigating={isKeyboardNavigating}
+                    getVerificationStatus={getVerificationStatus}
                   />
                 );
               })}

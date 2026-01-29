@@ -287,6 +287,7 @@ describe('PackageManagerSelectorModal - Property-Based Tests', () => {
           const optionButtons = document.querySelectorAll('button[role="option"]');
           
           for (let i = 0; i < expectedPMs.length; i++) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const pm = expectedPMs[i];
             const button = optionButtons[i] as HTMLElement;
             

@@ -2424,23 +2424,6 @@ export const apps: AppData[] = [
 
   // System
   {
-    id: 'htop',
-    name: 'htop',
-    description: 'Interactive process viewer',
-    category: 'System',
-    iconUrl: 'https://api.iconify.design/mdi/chart-bar.svg?color=%234CE026',
-    targets: {
-      homebrew: 'htop',
-      macports: 'htop',
-      apt: 'htop',
-      dnf: 'htop',
-      pacman: 'htop',
-      zypper: 'htop',
-      snap: 'htop',
-    },
-    unavailableReason: 'Unix/Linux-only application. Not available for Windows.',
-  },
-  {
     id: 'neofetch',
     name: 'Neofetch',
     description: 'System information tool',

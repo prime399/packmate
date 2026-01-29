@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import * as fc from 'fast-check';
 import { TerminalPreviewModal } from '@/components/command/TerminalPreviewModal';
 import { generateInstallScript } from '@/lib/generateInstallScript';

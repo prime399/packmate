@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import { apps, PackageManagerId, isAppAvailableForPackageManager } from '@/lib/data';
 
@@ -104,7 +104,8 @@ const selectionRequiredKeyArb = fc.constantFrom<ShortcutKey>(...selectionRequire
 // Generate an input element type
 const inputElementTypeArb = fc.constantFrom<InputElementType>(...inputElementTypes);
 
-// Generate a modifier key
+// Generate a modifier key (used in withModifierArb)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const modifierKeyArb = fc.constantFrom<ModifierKey>(...modifierKeys);
 
 // Generate a non-shortcut key (any key that's not a valid shortcut)

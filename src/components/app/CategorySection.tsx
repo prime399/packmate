@@ -4,7 +4,8 @@ import { memo, useMemo, useRef, useLayoutEffect, useEffect } from 'react';
 import gsap from 'gsap';
 import { CategoryHeader } from './CategoryHeader';
 import { AppItem } from './AppItem';
-import { AppData, Category, OSId, getCategoryColor } from '@/lib/data';
+import { AppData, Category, OSId, getCategoryColor, PackageManagerId } from '@/lib/data';
+import type { VerificationResult } from '@/lib/verification/types';
 
 // Requirements: 5.3, 5.5, 5.6 - Collapsible category section with animations
 
@@ -14,6 +15,7 @@ interface CategorySectionProps {
   selectedApps: Set<string>;
   isAppAvailable: (id: string) => boolean;
   selectedOS: OSId;
+  selectedPackageManager: PackageManagerId;
   toggleApp: (id: string) => void;
   isExpanded: boolean;
   onToggleExpanded: () => void;
@@ -22,6 +24,8 @@ interface CategorySectionProps {
   onTooltipLeave: () => void;
   focusedItem?: { type: 'category' | 'app'; id: string } | null;
   isKeyboardNavigating?: boolean;
+  /** Function to get verification status for an app */
+  getVerificationStatus?: (appId: string, packageManagerId: PackageManagerId) => VerificationResult | undefined;
 }
 
 export const CategorySection = memo(function CategorySection({
@@ -29,6 +33,7 @@ export const CategorySection = memo(function CategorySection({
   categoryApps,
   selectedApps,
   isAppAvailable,
+  selectedPackageManager,
   toggleApp,
   isExpanded,
   onToggleExpanded,
@@ -37,6 +42,7 @@ export const CategorySection = memo(function CategorySection({
   onTooltipLeave,
   focusedItem,
   isKeyboardNavigating = false,
+  getVerificationStatus,
 }: CategorySectionProps) {
   // Animation refs for GSAP
   // Requirements: 3.5, 5.2 - Track animation state and filter changes
@@ -133,21 +139,27 @@ export const CategorySection = memo(function CategorySection({
         style={{ maxHeight, opacity: isExpanded ? 1 : 0 }}
       >
         <div className="pt-1.5">
-          {categoryApps.map((app, index) => (
-            <AppItem
-              key={app.id}
-              app={app}
-              isSelected={selectedApps.has(app.id)}
-              isAvailable={isAppAvailable(app.id)}
-              onToggle={() => toggleApp(app.id)}
-              onTooltipEnter={onTooltipEnter}
-              onTooltipLeave={onTooltipLeave}
-              color={color}
-              animationDelay={isExpanded ? index * 30 : 0}
-              isFocused={focusedItem?.type === 'app' && focusedItem?.id === app.id}
-              isKeyboardNavigating={isKeyboardNavigating}
-            />
-          ))}
+          {categoryApps.map((app, index) => {
+            const verificationResult = getVerificationStatus?.(app.id, selectedPackageManager);
+            return (
+              <AppItem
+                key={app.id}
+                app={app}
+                isSelected={selectedApps.has(app.id)}
+                isAvailable={isAppAvailable(app.id)}
+                onToggle={() => toggleApp(app.id)}
+                onTooltipEnter={onTooltipEnter}
+                onTooltipLeave={onTooltipLeave}
+                color={color}
+                animationDelay={isExpanded ? index * 30 : 0}
+                isFocused={focusedItem?.type === 'app' && focusedItem?.id === app.id}
+                isKeyboardNavigating={isKeyboardNavigating}
+                verificationStatus={verificationResult?.status}
+                verificationTimestamp={verificationResult?.timestamp}
+                verificationError={verificationResult?.errorMessage}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

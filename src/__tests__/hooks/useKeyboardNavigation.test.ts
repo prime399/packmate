@@ -417,7 +417,8 @@ function computeFocusAfterEscape(_focusPos: FocusPosition | null): FocusPosition
 
 // Arbitrary generators for Property 2 and 3 tests
 
-// Generate a valid focus position for a given grid
+// Generate a valid focus position for a given grid (used in property tests)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const focusPosForGridArb = (navItems: NavItem[][]): fc.Arbitrary<FocusPosition> => {
   if (navItems.length === 0) {
     return fc.constant({ col: 0, row: 0 });

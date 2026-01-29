@@ -4,8 +4,11 @@ import { memo, useCallback } from 'react';
 import { Check, AlertCircle } from 'lucide-react';
 import { AppIcon } from './AppIcon';
 import { AppData } from '@/lib/data';
+import { VerificationBadge } from '@/components/verification/VerificationBadge';
+import type { VerificationStatus } from '@/lib/verification/types';
 
-// Requirements: 3.1, 3.2, 3.3, 6.1, 6.2, 6.3, 6.5, 6.6 - App row with checkbox, icon, name, and availability handling
+// Requirements: 3.1, 3.2, 3.3, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 6.1, 6.2, 6.3, 6.5, 6.6 
+// App row with checkbox, icon, name, availability handling, and verification badge
 
 interface AppItemProps {
   app: AppData;
@@ -18,6 +21,12 @@ interface AppItemProps {
   animationDelay?: number;
   isFocused?: boolean;
   isKeyboardNavigating?: boolean;
+  /** Verification status for the current package manager */
+  verificationStatus?: VerificationStatus;
+  /** Timestamp of last verification */
+  verificationTimestamp?: string;
+  /** Error message if verification failed */
+  verificationError?: string;
 }
 
 export const AppItem = memo(function AppItem({
@@ -31,6 +40,9 @@ export const AppItem = memo(function AppItem({
   animationDelay = 0,
   isFocused = false,
   isKeyboardNavigating = false,
+  verificationStatus,
+  verificationTimestamp,
+  verificationError,
 }: AppItemProps) {
   // Requirement 3.3: Show unavailableReason tooltip on hover for unavailable apps
   const handleMouseEnter = useCallback((e: React.MouseEvent) => {
@@ -112,6 +124,15 @@ export const AppItem = memo(function AppItem({
       }`}>
         {app.name}
       </span>
+
+      {/* Verification Badge - Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6 */}
+      {verificationStatus && isAvailable && (
+        <VerificationBadge
+          status={verificationStatus}
+          timestamp={verificationTimestamp}
+          errorMessage={verificationError}
+        />
+      )}
 
       {/* Requirement 3.3: Visual indicator for unavailable apps with reason */}
       {!isAvailable && app.unavailableReason && (

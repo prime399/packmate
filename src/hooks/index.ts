@@ -4,3 +4,4 @@ export { useKeyboardNavigation, type NavItem, type FocusPosition } from './useKe
 export { usePackmateInit } from './usePackmateInit';
 export { useTheme, ThemeProvider } from './useTheme';
 export { useTooltip, type TooltipState } from './useTooltip';
+export { useVerificationStatus, useSingleVerificationStatus } from './useVerificationStatus';
