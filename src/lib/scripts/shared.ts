@@ -62,7 +62,7 @@ export function generateAsciiHeader(packageManagerName: string, pkgCount: number
 #  ╚═╝     ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚══════╝
 #
 #  Cross-Platform App Installer
-#  https://github.com/packmate
+#  https://github.com/prime/packmate
 #
 #  Package Manager: ${packageManagerName}
 #  Packages: ${pkgCount}

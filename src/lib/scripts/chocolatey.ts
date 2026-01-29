@@ -32,7 +32,7 @@ exit 0
     '    Packmate - Cross-Platform App Installer',
     '.DESCRIPTION',
     '    PACKMATE - Cross-Platform App Installer',
-    '    https://github.com/packmate',
+    '    https://github.com/prime/packmate',
     '',
     '    Package Manager: Chocolatey',
     `    Packages: ${pkgCount}`,
