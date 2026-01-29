@@ -12,15 +12,20 @@ function extractPackages() {
   const content = fs.readFileSync(dataPath, 'utf-8');
   
   const packages = [];
-  const pattern = /id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?flatpak:\s*'([^']+)'/g;
+  const appBlocks = content.match(/\{\s*id:\s*'[^']+',[\s\S]*?targets:\s*\{[\s\S]*?\},?\s*\}/g) || [];
   
-  let match;
-  while ((match = pattern.exec(content)) !== null) {
-    packages.push({
-      appId: match[1],
-      appName: match[2],
-      packageName: match[3],
-    });
+  for (const block of appBlocks) {
+    const idMatch = block.match(/id:\s*'([^']+)'/);
+    const nameMatch = block.match(/name:\s*'([^']+)'/);
+    const flatpakMatch = block.match(/flatpak:\s*'([^']+)'/);
+    
+    if (idMatch && nameMatch && flatpakMatch) {
+      packages.push({
+        appId: idMatch[1],
+        appName: nameMatch[1],
+        packageName: flatpakMatch[1],
+      });
+    }
   }
   
   return packages;

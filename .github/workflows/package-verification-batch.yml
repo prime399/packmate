@@ -17,6 +17,10 @@ on:
 env:
   NODE_VERSION: '20'
 
+defaults:
+  run:
+    working-directory: packmate
+
 jobs:
   # Windows Package Managers
   test-winget:
@@ -32,7 +36,7 @@ jobs:
         shell: pwsh
         run: |
           $results = @()
-          $dataFile = Get-Content "packmate/src/lib/data.ts" -Raw
+          $dataFile = Get-Content "src/lib/data.ts" -Raw
           
           # Extract winget packages using regex
           $pattern = "id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?winget:\s*'([^']+)'"
@@ -84,7 +88,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: results-winget
-          path: winget-results.json
+          path: packmate/winget-results.json
           retention-days: 30
 
   test-chocolatey:
@@ -100,7 +104,7 @@ jobs:
         shell: pwsh
         run: |
           $results = @()
-          $dataFile = Get-Content "packmate/src/lib/data.ts" -Raw
+          $dataFile = Get-Content "src/lib/data.ts" -Raw
           
           $pattern = "id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?chocolatey:\s*'([^']+)'"
           $matches = [regex]::Matches($dataFile, $pattern)
@@ -149,7 +153,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: results-chocolatey
-          path: chocolatey-results.json
+          path: packmate/chocolatey-results.json
           retention-days: 30
 
   test-scoop:
@@ -160,6 +164,7 @@ jobs:
       
       - name: Install Scoop
         shell: pwsh
+        working-directory: ${{ github.workspace }}
         run: |
           Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
           Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
@@ -171,7 +176,7 @@ jobs:
         run: |
           $env:PATH = "$env:USERPROFILE\scoop\shims;$env:PATH"
           $results = @()
-          $dataFile = Get-Content "packmate/src/lib/data.ts" -Raw
+          $dataFile = Get-Content "src/lib/data.ts" -Raw
           
           $pattern = "id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?scoop:\s*'([^']+)'"
           $matches = [regex]::Matches($dataFile, $pattern)
@@ -220,7 +225,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: results-scoop
-          path: scoop-results.json
+          path: packmate/scoop-results.json
           retention-days: 30
 
   # macOS Package Managers
@@ -235,12 +240,12 @@ jobs:
       
       - name: Test all Homebrew packages
         run: |
-          node packmate/.github/scripts/test-homebrew.js
+          node .github/scripts/test-homebrew.js
       
       - uses: actions/upload-artifact@v4
         with:
           name: results-homebrew
-          path: homebrew-results.json
+          path: packmate/homebrew-results.json
           retention-days: 30
 
   # Linux Package Managers
@@ -258,12 +263,12 @@ jobs:
       
       - name: Test all APT packages
         run: |
-          node packmate/.github/scripts/test-apt.js
+          node .github/scripts/test-apt.js
       
       - uses: actions/upload-artifact@v4
         with:
           name: results-apt
-          path: apt-results.json
+          path: packmate/apt-results.json
           retention-days: 30
 
   test-flatpak:
@@ -279,16 +284,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y flatpak
-          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
       
       - name: Test all Flatpak packages
         run: |
-          node packmate/.github/scripts/test-flatpak.js
+          node .github/scripts/test-flatpak.js
       
       - uses: actions/upload-artifact@v4
         with:
           name: results-flatpak
-          path: flatpak-results.json
+          path: packmate/flatpak-results.json
           retention-days: 30
 
   test-snap:
@@ -302,12 +307,12 @@ jobs:
       
       - name: Test all Snap packages
         run: |
-          node packmate/.github/scripts/test-snap.js
+          node .github/scripts/test-snap.js
       
       - uses: actions/upload-artifact@v4
         with:
           name: results-snap
-          path: snap-results.json
+          path: packmate/snap-results.json
           retention-days: 30
 
   test-dnf:
@@ -319,16 +324,18 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Node.js
+        working-directory: ${{ github.workspace }}
         run: dnf install -y nodejs
       
       - name: Test all DNF packages
+        working-directory: ${{ github.workspace }}/packmate
         run: |
-          node packmate/.github/scripts/test-dnf.js
+          node .github/scripts/test-dnf.js
       
       - uses: actions/upload-artifact@v4
         with:
           name: results-dnf
-          path: dnf-results.json
+          path: packmate/dnf-results.json
           retention-days: 30
 
   test-pacman:
@@ -340,17 +347,19 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Node.js
+        working-directory: ${{ github.workspace }}
         run: |
           pacman -Sy --noconfirm nodejs npm
       
       - name: Test all Pacman packages
+        working-directory: ${{ github.workspace }}/packmate
         run: |
-          node packmate/.github/scripts/test-pacman.js
+          node .github/scripts/test-pacman.js
       
       - uses: actions/upload-artifact@v4
         with:
           name: results-pacman
-          path: pacman-results.json
+          path: packmate/pacman-results.json
           retention-days: 30
 
   test-zypper:
@@ -362,16 +371,18 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Node.js
-        run: zypper install -y nodejs20
+        working-directory: ${{ github.workspace }}
+        run: zypper install -y nodejs22
       
       - name: Test all Zypper packages
+        working-directory: ${{ github.workspace }}/packmate
         run: |
-          node packmate/.github/scripts/test-zypper.js
+          node .github/scripts/test-zypper.js
       
       - uses: actions/upload-artifact@v4
         with:
           name: results-zypper
-          path: zypper-results.json
+          path: packmate/zypper-results.json
           retention-days: 30
 
   # Aggregate all results
@@ -392,16 +403,17 @@ jobs:
           pattern: results-*
       
       - name: Aggregate results
+        working-directory: packmate
         run: |
-          node packmate/.github/scripts/aggregate-batch-results.js
+          node .github/scripts/aggregate-batch-results.js
       
       - uses: actions/upload-artifact@v4
         with:
           name: verification-report
           path: |
-            verification-report.json
-            verification-report.md
+            packmate/verification-report.json
+            packmate/verification-report.md
           retention-days: 90
       
       - name: Create summary
-        run: cat verification-report.md >> $GITHUB_STEP_SUMMARY
+        run: cat packmate/verification-report.md >> $GITHUB_STEP_SUMMARY

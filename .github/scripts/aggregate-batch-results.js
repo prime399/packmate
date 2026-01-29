@@ -203,7 +203,9 @@ function generateMarkdownReport(results, stats) {
 }
 
 // Main execution
-const resultsDir = path.join(process.cwd(), 'results');
+// Results are downloaded to workspace root by download-artifact action
+const workspaceRoot = process.env.GITHUB_WORKSPACE || path.join(__dirname, '../../..');
+const resultsDir = path.join(workspaceRoot, 'results');
 console.log(`Looking for results in: ${resultsDir}`);
 
 const files = findResultFiles(resultsDir);
