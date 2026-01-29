@@ -1,0 +1,407 @@
+# Batch Package Verification - More efficient version that tests packages in batches
+# This avoids GitHub Actions matrix limits while still testing all packages
+
+name: Package Verification (Batch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_managers:
+        description: 'Package managers to test (comma-separated, or "all")'
+        required: false
+        default: 'all'
+  schedule:
+    # Run weekly on Sunday at 3 AM UTC
+    - cron: '0 3 * * 0'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # Windows Package Managers
+  test-winget:
+    runs-on: windows-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'winget') || contains(github.event.inputs.package_managers || 'all', 'all')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Test all Winget packages
+        shell: pwsh
+        run: |
+          $results = @()
+          $dataFile = Get-Content "packmate/src/lib/data.ts" -Raw
+          
+          # Extract winget packages using regex
+          $pattern = "id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?winget:\s*'([^']+)'"
+          $matches = [regex]::Matches($dataFile, $pattern)
+          
+          foreach ($match in $matches) {
+            $appId = $match.Groups[1].Value
+            $appName = $match.Groups[2].Value
+            $packageName = $match.Groups[3].Value
+            
+            Write-Host "Testing: $appName ($packageName)"
+            
+            $result = @{
+              appId = $appId
+              appName = $appName
+              packageManager = "winget"
+              packageName = $packageName
+              status = "unknown"
+              error = ""
+              timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            }
+            
+            try {
+              $output = winget search --id $packageName --exact 2>&1
+              if ($LASTEXITCODE -eq 0 -and $output -match $packageName) {
+                $result.status = "available"
+                Write-Host "  ✓ Available" -ForegroundColor Green
+              } else {
+                $result.status = "not_found"
+                $result.error = "Package not found"
+                Write-Host "  ✗ Not found" -ForegroundColor Red
+              }
+            } catch {
+              $result.status = "error"
+              $result.error = $_.Exception.Message
+              Write-Host "  ⚠ Error: $($_.Exception.Message)" -ForegroundColor Yellow
+            }
+            
+            $results += $result
+          }
+          
+          $results | ConvertTo-Json -Depth 10 | Out-File "winget-results.json" -Encoding utf8
+          
+          # Summary
+          $available = ($results | Where-Object { $_.status -eq "available" }).Count
+          $total = $results.Count
+          Write-Host "`nSummary: $available/$total packages available"
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-winget
+          path: winget-results.json
+          retention-days: 30
+
+  test-chocolatey:
+    runs-on: windows-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'chocolatey') || contains(github.event.inputs.package_managers || 'all', 'all')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Test all Chocolatey packages
+        shell: pwsh
+        run: |
+          $results = @()
+          $dataFile = Get-Content "packmate/src/lib/data.ts" -Raw
+          
+          $pattern = "id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?chocolatey:\s*'([^']+)'"
+          $matches = [regex]::Matches($dataFile, $pattern)
+          
+          foreach ($match in $matches) {
+            $appId = $match.Groups[1].Value
+            $appName = $match.Groups[2].Value
+            $packageName = $match.Groups[3].Value
+            
+            Write-Host "Testing: $appName ($packageName)"
+            
+            $result = @{
+              appId = $appId
+              appName = $appName
+              packageManager = "chocolatey"
+              packageName = $packageName
+              status = "unknown"
+              error = ""
+              timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            }
+            
+            try {
+              $output = choco search $packageName --exact --limit-output 2>&1
+              if ($output -match $packageName) {
+                $result.status = "available"
+                Write-Host "  ✓ Available" -ForegroundColor Green
+              } else {
+                $result.status = "not_found"
+                $result.error = "Package not found"
+                Write-Host "  ✗ Not found" -ForegroundColor Red
+              }
+            } catch {
+              $result.status = "error"
+              $result.error = $_.Exception.Message
+              Write-Host "  ⚠ Error" -ForegroundColor Yellow
+            }
+            
+            $results += $result
+          }
+          
+          $results | ConvertTo-Json -Depth 10 | Out-File "chocolatey-results.json" -Encoding utf8
+          
+          $available = ($results | Where-Object { $_.status -eq "available" }).Count
+          Write-Host "`nSummary: $available/$($results.Count) packages available"
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-chocolatey
+          path: chocolatey-results.json
+          retention-days: 30
+
+  test-scoop:
+    runs-on: windows-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'scoop') || contains(github.event.inputs.package_managers || 'all', 'all')
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Scoop
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+          scoop bucket add extras
+          scoop bucket add versions
+      
+      - name: Test all Scoop packages
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:USERPROFILE\scoop\shims;$env:PATH"
+          $results = @()
+          $dataFile = Get-Content "packmate/src/lib/data.ts" -Raw
+          
+          $pattern = "id:\s*'([^']+)'[\s\S]*?name:\s*'([^']+)'[\s\S]*?scoop:\s*'([^']+)'"
+          $matches = [regex]::Matches($dataFile, $pattern)
+          
+          foreach ($match in $matches) {
+            $appId = $match.Groups[1].Value
+            $appName = $match.Groups[2].Value
+            $packageName = $match.Groups[3].Value
+            
+            Write-Host "Testing: $appName ($packageName)"
+            
+            $result = @{
+              appId = $appId
+              appName = $appName
+              packageManager = "scoop"
+              packageName = $packageName
+              status = "unknown"
+              error = ""
+              timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            }
+            
+            try {
+              $output = scoop search $packageName 2>&1
+              if ($output -match $packageName) {
+                $result.status = "available"
+                Write-Host "  ✓ Available" -ForegroundColor Green
+              } else {
+                $result.status = "not_found"
+                $result.error = "Package not found"
+                Write-Host "  ✗ Not found" -ForegroundColor Red
+              }
+            } catch {
+              $result.status = "error"
+              $result.error = $_.Exception.Message
+              Write-Host "  ⚠ Error" -ForegroundColor Yellow
+            }
+            
+            $results += $result
+          }
+          
+          $results | ConvertTo-Json -Depth 10 | Out-File "scoop-results.json" -Encoding utf8
+          
+          $available = ($results | Where-Object { $_.status -eq "available" }).Count
+          Write-Host "`nSummary: $available/$($results.Count) packages available"
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-scoop
+          path: scoop-results.json
+          retention-days: 30
+
+  # macOS Package Managers
+  test-homebrew:
+    runs-on: macos-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'homebrew') || contains(github.event.inputs.package_managers || 'all', 'all')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Test all Homebrew packages
+        run: |
+          node packmate/.github/scripts/test-homebrew.js
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-homebrew
+          path: homebrew-results.json
+          retention-days: 30
+
+  # Linux Package Managers
+  test-apt:
+    runs-on: ubuntu-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'apt') || contains(github.event.inputs.package_managers || 'all', 'all')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Update APT cache
+        run: sudo apt-get update
+      
+      - name: Test all APT packages
+        run: |
+          node packmate/.github/scripts/test-apt.js
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-apt
+          path: apt-results.json
+          retention-days: 30
+
+  test-flatpak:
+    runs-on: ubuntu-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'flatpak') || contains(github.event.inputs.package_managers || 'all', 'all')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Setup Flatpak
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak
+          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      
+      - name: Test all Flatpak packages
+        run: |
+          node packmate/.github/scripts/test-flatpak.js
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-flatpak
+          path: flatpak-results.json
+          retention-days: 30
+
+  test-snap:
+    runs-on: ubuntu-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'snap') || contains(github.event.inputs.package_managers || 'all', 'all')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Test all Snap packages
+        run: |
+          node packmate/.github/scripts/test-snap.js
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-snap
+          path: snap-results.json
+          retention-days: 30
+
+  test-dnf:
+    runs-on: ubuntu-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'dnf') || contains(github.event.inputs.package_managers || 'all', 'all')
+    container:
+      image: fedora:latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Node.js
+        run: dnf install -y nodejs
+      
+      - name: Test all DNF packages
+        run: |
+          node packmate/.github/scripts/test-dnf.js
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-dnf
+          path: dnf-results.json
+          retention-days: 30
+
+  test-pacman:
+    runs-on: ubuntu-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'pacman') || contains(github.event.inputs.package_managers || 'all', 'all')
+    container:
+      image: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Node.js
+        run: |
+          pacman -Sy --noconfirm nodejs npm
+      
+      - name: Test all Pacman packages
+        run: |
+          node packmate/.github/scripts/test-pacman.js
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-pacman
+          path: pacman-results.json
+          retention-days: 30
+
+  test-zypper:
+    runs-on: ubuntu-latest
+    if: contains(github.event.inputs.package_managers || 'all', 'zypper') || contains(github.event.inputs.package_managers || 'all', 'all')
+    container:
+      image: opensuse/tumbleweed:latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Node.js
+        run: zypper install -y nodejs20
+      
+      - name: Test all Zypper packages
+        run: |
+          node packmate/.github/scripts/test-zypper.js
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: results-zypper
+          path: zypper-results.json
+          retention-days: 30
+
+  # Aggregate all results
+  aggregate:
+    needs: [test-winget, test-chocolatey, test-scoop, test-homebrew, test-apt, test-flatpak, test-snap, test-dnf, test-pacman, test-zypper]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: Download all results
+        uses: actions/download-artifact@v4
+        with:
+          path: results
+          pattern: results-*
+      
+      - name: Aggregate results
+        run: |
+          node packmate/.github/scripts/aggregate-batch-results.js
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verification-report
+          path: |
+            verification-report.json
+            verification-report.md
+          retention-days: 90
+      
+      - name: Create summary
+        run: cat verification-report.md >> $GITHUB_STEP_SUMMARY

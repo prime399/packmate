@@ -1,0 +1,582 @@
+# Package Verification CI - Tests all packages from the catalog against their package managers
+# Runs on multiple platforms (Windows, macOS, Linux) with different package managers
+# Results are saved as artifacts for analysis
+
+name: Package Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      category:
+        description: 'Category to test (leave empty for all)'
+        required: false
+        default: ''
+      package_manager:
+        description: 'Package manager to test (leave empty for all)'
+        required: false
+        default: ''
+  schedule:
+    # Run weekly on Sunday at 2 AM UTC
+    - cron: '0 2 * * 0'
+
+jobs:
+  # Generate the test matrix from the app catalog
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      windows-matrix: ${{ steps.matrix.outputs.windows }}
+      macos-matrix: ${{ steps.matrix.outputs.macos }}
+      linux-matrix: ${{ steps.matrix.outputs.linux }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Generate test matrices
+        id: matrix
+        run: |
+          node packmate/.github/scripts/generate-matrix.js \
+            --category "${{ github.event.inputs.category }}" \
+            --package-manager "${{ github.event.inputs.package_manager }}"
+
+  # Windows Package Manager Tests
+  test-windows:
+    needs: generate-matrix
+    if: needs.generate-matrix.outputs.windows-matrix != '[]'
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.windows-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Chocolatey
+        if: matrix.packageManager == 'chocolatey'
+        run: |
+          # Chocolatey is pre-installed on GitHub runners
+          choco --version
+      
+      - name: Setup Scoop
+        if: matrix.packageManager == 'scoop'
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+          Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+          scoop bucket add extras
+      
+      - name: Test Package - ${{ matrix.appName }} (${{ matrix.packageManager }})
+        id: test
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $startTime = Get-Date
+          $result = @{
+            appId = "${{ matrix.appId }}"
+            appName = "${{ matrix.appName }}"
+            packageManager = "${{ matrix.packageManager }}"
+            packageName = "${{ matrix.packageName }}"
+            status = "unknown"
+            error = ""
+            duration = 0
+            timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+          }
+          
+          try {
+            switch ("${{ matrix.packageManager }}") {
+              "winget" {
+                # Search for package existence (don't actually install)
+                $output = winget search --id "${{ matrix.packageName }}" --exact 2>&1
+                if ($LASTEXITCODE -eq 0 -and $output -match "${{ matrix.packageName }}") {
+                  $result.status = "available"
+                } else {
+                  $result.status = "not_found"
+                  $result.error = "Package not found in winget repository"
+                }
+              }
+              "chocolatey" {
+                $output = choco search "${{ matrix.packageName }}" --exact --limit-output 2>&1
+                if ($output -match "${{ matrix.packageName }}") {
+                  $result.status = "available"
+                } else {
+                  $result.status = "not_found"
+                  $result.error = "Package not found in Chocolatey repository"
+                }
+              }
+              "scoop" {
+                $output = scoop search "${{ matrix.packageName }}" 2>&1
+                if ($output -match "${{ matrix.packageName }}") {
+                  $result.status = "available"
+                } else {
+                  $result.status = "not_found"
+                  $result.error = "Package not found in Scoop buckets"
+                }
+              }
+            }
+          } catch {
+            $result.status = "error"
+            $result.error = $_.Exception.Message
+          }
+          
+          $result.duration = ((Get-Date) - $startTime).TotalSeconds
+          
+          # Save result to file
+          $resultJson = $result | ConvertTo-Json -Compress
+          $filename = "${{ matrix.appId }}-${{ matrix.packageManager }}.json"
+          $resultJson | Out-File -FilePath $filename -Encoding utf8
+          
+          Write-Host "Result: $resultJson"
+          
+          if ($result.status -ne "available") {
+            exit 1
+          }
+      
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-windows-${{ matrix.appId }}-${{ matrix.packageManager }}
+          path: "*.json"
+          retention-days: 30
+
+  # macOS Package Manager Tests
+  test-macos:
+    needs: generate-matrix
+    if: needs.generate-matrix.outputs.macos-matrix != '[]'
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.macos-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Homebrew
+        if: matrix.packageManager == 'homebrew'
+        run: |
+          brew --version
+      
+      - name: Setup MacPorts
+        if: matrix.packageManager == 'macports'
+        run: |
+          # Install MacPorts
+          curl -LO https://github.com/macports/macports-base/releases/download/v2.9.3/MacPorts-2.9.3-14-Sonoma.pkg
+          sudo installer -pkg MacPorts-2.9.3-14-Sonoma.pkg -target /
+          export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
+          sudo port selfupdate
+      
+      - name: Test Package - ${{ matrix.appName }} (${{ matrix.packageManager }})
+        id: test
+        continue-on-error: true
+        run: |
+          START_TIME=$(date +%s)
+          
+          APP_ID="${{ matrix.appId }}"
+          APP_NAME="${{ matrix.appName }}"
+          PKG_MGR="${{ matrix.packageManager }}"
+          PKG_NAME="${{ matrix.packageName }}"
+          STATUS="unknown"
+          ERROR=""
+          
+          case "$PKG_MGR" in
+            "homebrew")
+              # Check if it's a cask or formula
+              if [[ "$PKG_NAME" == --cask* ]]; then
+                CASK_NAME=$(echo "$PKG_NAME" | sed 's/--cask //')
+                if brew info --cask "$CASK_NAME" &>/dev/null; then
+                  STATUS="available"
+                else
+                  STATUS="not_found"
+                  ERROR="Cask not found in Homebrew"
+                fi
+              else
+                if brew info "$PKG_NAME" &>/dev/null; then
+                  STATUS="available"
+                else
+                  STATUS="not_found"
+                  ERROR="Formula not found in Homebrew"
+                fi
+              fi
+              ;;
+            "macports")
+              export PATH="/opt/local/bin:/opt/local/sbin:$PATH"
+              if port info "$PKG_NAME" &>/dev/null; then
+                STATUS="available"
+              else
+                STATUS="not_found"
+                ERROR="Port not found in MacPorts"
+              fi
+              ;;
+          esac
+          
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Create JSON result
+          cat > "${APP_ID}-${PKG_MGR}.json" << EOF
+          {
+            "appId": "$APP_ID",
+            "appName": "$APP_NAME",
+            "packageManager": "$PKG_MGR",
+            "packageName": "$PKG_NAME",
+            "status": "$STATUS",
+            "error": "$ERROR",
+            "duration": $DURATION,
+            "timestamp": "$TIMESTAMP"
+          }
+          EOF
+          
+          cat "${APP_ID}-${PKG_MGR}.json"
+          
+          if [ "$STATUS" != "available" ]; then
+            exit 1
+          fi
+      
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-macos-${{ matrix.appId }}-${{ matrix.packageManager }}
+          path: "*.json"
+          retention-days: 30
+
+  # Linux Package Manager Tests
+  test-linux:
+    needs: generate-matrix
+    if: needs.generate-matrix.outputs.linux-matrix != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.linux-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Flatpak
+        if: matrix.packageManager == 'flatpak'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak
+          flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+      
+      - name: Setup Snap
+        if: matrix.packageManager == 'snap'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y snapd
+      
+      - name: Test Package - ${{ matrix.appName }} (${{ matrix.packageManager }})
+        id: test
+        continue-on-error: true
+        run: |
+          START_TIME=$(date +%s)
+          
+          APP_ID="${{ matrix.appId }}"
+          APP_NAME="${{ matrix.appName }}"
+          PKG_MGR="${{ matrix.packageManager }}"
+          PKG_NAME="${{ matrix.packageName }}"
+          STATUS="unknown"
+          ERROR=""
+          
+          case "$PKG_MGR" in
+            "apt")
+              sudo apt-get update
+              if apt-cache show "$PKG_NAME" &>/dev/null; then
+                STATUS="available"
+              else
+                STATUS="not_found"
+                ERROR="Package not found in APT repositories"
+              fi
+              ;;
+            "flatpak")
+              if flatpak search "$PKG_NAME" 2>/dev/null | grep -q "$PKG_NAME"; then
+                STATUS="available"
+              else
+                STATUS="not_found"
+                ERROR="Package not found on Flathub"
+              fi
+              ;;
+            "snap")
+              # Remove any flags like --classic
+              SNAP_PKG=$(echo "$PKG_NAME" | awk '{print $1}')
+              if snap info "$SNAP_PKG" &>/dev/null; then
+                STATUS="available"
+              else
+                STATUS="not_found"
+                ERROR="Package not found in Snap Store"
+              fi
+              ;;
+            "dnf"|"pacman"|"zypper")
+              # These require specific distro containers - mark as skipped
+              STATUS="skipped"
+              ERROR="Requires specific Linux distribution"
+              ;;
+          esac
+          
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Create JSON result
+          cat > "${APP_ID}-${PKG_MGR}.json" << EOF
+          {
+            "appId": "$APP_ID",
+            "appName": "$APP_NAME",
+            "packageManager": "$PKG_MGR",
+            "packageName": "$PKG_NAME",
+            "status": "$STATUS",
+            "error": "$ERROR",
+            "duration": $DURATION,
+            "timestamp": "$TIMESTAMP"
+          }
+          EOF
+          
+          cat "${APP_ID}-${PKG_MGR}.json"
+          
+          if [ "$STATUS" != "available" ] && [ "$STATUS" != "skipped" ]; then
+            exit 1
+          fi
+      
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-linux-${{ matrix.appId }}-${{ matrix.packageManager }}
+          path: "*.json"
+          retention-days: 30
+
+
+  # Linux distro-specific tests using Docker containers
+  test-linux-fedora:
+    needs: generate-matrix
+    if: needs.generate-matrix.outputs.linux-matrix != '[]'
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.linux-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test Package - ${{ matrix.appName }} (dnf)
+        if: matrix.packageManager == 'dnf'
+        id: test
+        continue-on-error: true
+        run: |
+          START_TIME=$(date +%s)
+          
+          APP_ID="${{ matrix.appId }}"
+          APP_NAME="${{ matrix.appName }}"
+          PKG_NAME="${{ matrix.packageName }}"
+          STATUS="unknown"
+          ERROR=""
+          
+          dnf makecache
+          if dnf info "$PKG_NAME" &>/dev/null; then
+            STATUS="available"
+          else
+            STATUS="not_found"
+            ERROR="Package not found in DNF repositories"
+          fi
+          
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          cat > "${APP_ID}-dnf.json" << EOF
+          {
+            "appId": "$APP_ID",
+            "appName": "$APP_NAME",
+            "packageManager": "dnf",
+            "packageName": "$PKG_NAME",
+            "status": "$STATUS",
+            "error": "$ERROR",
+            "duration": $DURATION,
+            "timestamp": "$TIMESTAMP"
+          }
+          EOF
+          
+          cat "${APP_ID}-dnf.json"
+          
+          if [ "$STATUS" != "available" ]; then
+            exit 1
+          fi
+      
+      - name: Upload result
+        if: matrix.packageManager == 'dnf'
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-fedora-${{ matrix.appId }}-dnf
+          path: "*.json"
+          retention-days: 30
+
+  test-linux-arch:
+    needs: generate-matrix
+    if: needs.generate-matrix.outputs.linux-matrix != '[]'
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.linux-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test Package - ${{ matrix.appName }} (pacman)
+        if: matrix.packageManager == 'pacman'
+        id: test
+        continue-on-error: true
+        run: |
+          START_TIME=$(date +%s)
+          
+          APP_ID="${{ matrix.appId }}"
+          APP_NAME="${{ matrix.appName }}"
+          PKG_NAME="${{ matrix.packageName }}"
+          STATUS="unknown"
+          ERROR=""
+          
+          pacman -Sy
+          if pacman -Si "$PKG_NAME" &>/dev/null; then
+            STATUS="available"
+          else
+            STATUS="not_found"
+            ERROR="Package not found in Pacman repositories"
+          fi
+          
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          cat > "${APP_ID}-pacman.json" << EOF
+          {
+            "appId": "$APP_ID",
+            "appName": "$APP_NAME",
+            "packageManager": "pacman",
+            "packageName": "$PKG_NAME",
+            "status": "$STATUS",
+            "error": "$ERROR",
+            "duration": $DURATION,
+            "timestamp": "$TIMESTAMP"
+          }
+          EOF
+          
+          cat "${APP_ID}-pacman.json"
+          
+          if [ "$STATUS" != "available" ]; then
+            exit 1
+          fi
+      
+      - name: Upload result
+        if: matrix.packageManager == 'pacman'
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-arch-${{ matrix.appId }}-pacman
+          path: "*.json"
+          retention-days: 30
+
+  test-linux-opensuse:
+    needs: generate-matrix
+    if: needs.generate-matrix.outputs.linux-matrix != '[]'
+    runs-on: ubuntu-latest
+    container:
+      image: opensuse/tumbleweed:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-matrix.outputs.linux-matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test Package - ${{ matrix.appName }} (zypper)
+        if: matrix.packageManager == 'zypper'
+        id: test
+        continue-on-error: true
+        run: |
+          START_TIME=$(date +%s)
+          
+          APP_ID="${{ matrix.appId }}"
+          APP_NAME="${{ matrix.appName }}"
+          PKG_NAME="${{ matrix.packageName }}"
+          STATUS="unknown"
+          ERROR=""
+          
+          zypper refresh
+          if zypper info "$PKG_NAME" &>/dev/null; then
+            STATUS="available"
+          else
+            STATUS="not_found"
+            ERROR="Package not found in Zypper repositories"
+          fi
+          
+          END_TIME=$(date +%s)
+          DURATION=$((END_TIME - START_TIME))
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          cat > "${APP_ID}-zypper.json" << EOF
+          {
+            "appId": "$APP_ID",
+            "appName": "$APP_NAME",
+            "packageManager": "zypper",
+            "packageName": "$PKG_NAME",
+            "status": "$STATUS",
+            "error": "$ERROR",
+            "duration": $DURATION,
+            "timestamp": "$TIMESTAMP"
+          }
+          EOF
+          
+          cat "${APP_ID}-zypper.json"
+          
+          if [ "$STATUS" != "available" ]; then
+            exit 1
+          fi
+      
+      - name: Upload result
+        if: matrix.packageManager == 'zypper'
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-opensuse-${{ matrix.appId }}-zypper
+          path: "*.json"
+          retention-days: 30
+
+  # Aggregate all results
+  aggregate-results:
+    needs: [test-windows, test-macos, test-linux, test-linux-fedora, test-linux-arch, test-linux-opensuse]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: results
+          pattern: result-*
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Aggregate results
+        run: |
+          node packmate/.github/scripts/aggregate-results.js
+      
+      - name: Upload aggregated report
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-report
+          path: |
+            verification-report.json
+            verification-report.md
+          retention-days: 90
+      
+      - name: Create summary
+        run: |
+          if [ -f verification-report.md ]; then
+            cat verification-report.md >> $GITHUB_STEP_SUMMARY
+          fi
