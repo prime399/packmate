@@ -1,0 +1,62 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "navigate_page",
+        "take_screenshot",
+        "list_console_messages",
+        "take_snapshot",
+        "list_pages",
+        "list_network_requests",
+        "get_console_message",
+        "evaluate_script"
+      ]
+    },
+    "Context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        ""
+      ],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "query-docs"
+      ]
+    },
+    "mongodb": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mongodb-mcp-server@latest",
+        "--readOnly"
+      ],
+      "env": {
+        "MDB_MCP_CONNECTION_STRING": ""
+      },
+      "autoApprove": [
+        "connect",
+        "list-databases"
+      ]
+    }
+  },
+  "powers": {
+    "mcpServers": {
+      "power-postman-postman": {
+        "url": "https://mcp.postman.com/minimal",
+        "headers": {
+          "Authorization": "Bearer ${}"
+        }
+      }
+    }
+  }
+}
