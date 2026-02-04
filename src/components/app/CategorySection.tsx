@@ -8,6 +8,7 @@ import { AppData, Category, OSId, getCategoryColor, PackageManagerId } from '@/l
 import type { VerificationResult } from '@/lib/verification/types';
 
 // Requirements: 5.3, 5.5, 5.6 - Collapsible category section with animations
+// Smart Search Requirements: 9.1, 9.2, 9.4 - Search result animations
 
 interface CategorySectionProps {
   category: Category;
@@ -46,9 +47,10 @@ export const CategorySection = memo(function CategorySection({
 }: CategorySectionProps) {
   // Animation refs for GSAP
   // Requirements: 3.5, 5.2 - Track animation state and filter changes
+  // Smart Search Requirements: 9.1, 9.2, 9.4, 9.5 - Search result animations
   const sectionRef = useRef<HTMLDivElement>(null);
   const hasAnimated = useRef(false);
-  const prevAppCount = useRef(categoryApps.length);
+  const prevAppIds = useRef<string[]>(categoryApps.map(a => a.id));
 
   // Initial entrance animation
   // Requirements: 3.1, 3.2, 3.3, 3.4, 6.1, 6.3 - Animate category header and app items
@@ -88,15 +90,47 @@ export const CategorySection = memo(function CategorySection({
     });
   }, [categoryIndex]);
 
-  // Handle app count changes (filter changes)
-  // Requirements: 5.1, 5.3 - Reset item visibility when app count changes
+  // Handle search filter changes - animate newly visible apps
+  // Smart Search Requirements: 9.1, 9.2, 9.4, 9.5
   useEffect(() => {
-    if (categoryApps.length !== prevAppCount.current && sectionRef.current) {
+    if (!sectionRef.current || !hasAnimated.current) return;
+    
+    const currentAppIds = categoryApps.map(a => a.id);
+    const prevIds = prevAppIds.current;
+    
+    // Find newly added apps (apps that weren't in the previous list)
+    const newAppIds = currentAppIds.filter(id => !prevIds.includes(id));
+    
+    if (newAppIds.length > 0) {
+      // Animate newly visible apps with staggered fade-in and slide
       const items = sectionRef.current.querySelectorAll('.app-item');
-      gsap.set(items, { y: 0, opacity: 1, clearProps: 'all' });
+      const newItems: Element[] = [];
+      
+      items.forEach((item) => {
+        const appId = item.getAttribute('data-app-id');
+        if (appId && newAppIds.includes(appId)) {
+          newItems.push(item);
+        }
+      });
+      
+      if (newItems.length > 0) {
+        // Set initial state for new items
+        gsap.set(newItems, { y: -10, opacity: 0, force3D: true });
+        
+        // Animate with stagger - complete within 300ms (Requirement 9.4)
+        gsap.to(newItems, {
+          y: 0,
+          opacity: 1,
+          duration: 0.25,
+          ease: 'power2.out',
+          stagger: 0.03,
+          force3D: true
+        });
+      }
     }
-    prevAppCount.current = categoryApps.length;
-  }, [categoryApps.length]);
+    
+    prevAppIds.current = currentAppIds;
+  }, [categoryApps]);
 
   const color = getCategoryColor(category);
   

@@ -4,15 +4,24 @@ import { useState, useEffect, useCallback, useMemo, useSyncExternalStore } from 
 import { 
   OSId, 
   apps, 
+  categories,
+  Category,
   STORAGE_KEYS, 
   PackageManagerId, 
   PackageManager,
+  AppData,
   getPackageManagersByOS,
   getPrimaryPackageManager,
 } from '@/lib/data';
+import {
+  filterApps,
+  filterCategories,
+  getFilteredAppsByCategory,
+} from '@/lib/search';
 
 // Requirements: 2.3, 2.4, 2.5, 2.6, 8.1, 8.2, 8.3, 8.4, 8.5, 9.1, 9.2, 9.3, 9.4, 9.5
-// Main state hook for OS selection, package manager selection, app selection, and localStorage persistence
+// Smart Search Requirements: 1.1, 5.1, 6.1, 7.3
+// Main state hook for OS selection, package manager selection, app selection, search, and localStorage persistence
 
 interface UsePackmateInitReturn {
   // OS Selection
@@ -32,6 +41,14 @@ interface UsePackmateInitReturn {
   
   // Availability (Requirement 8.2)
   isAppAvailable: (id: string) => boolean;
+  
+  // Search State (Smart Search Requirements 1.1, 5.1, 6.1, 7.3)
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
+  filteredApps: AppData[];
+  filteredCategories: Category[];
+  getFilteredAppsByCategoryFn: (category: Category) => AppData[];
+  hasSearchResults: boolean;
   
   // Hydration
   isHydrated: boolean;
@@ -153,6 +170,9 @@ export function usePackmateInit(): UsePackmateInitReturn {
   );
   const [selectedApps, setSelectedApps] = useState<Set<string>>(() => getInitialApps());
   const [isHydrated, setIsHydrated] = useState(false);
+  
+  // Search state - Smart Search Requirements 1.1, 5.1, 6.1, 7.3
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Mark as hydrated after mount
   useEffect(() => {
@@ -261,6 +281,26 @@ export function usePackmateInit(): UsePackmateInitReturn {
   // Count of selected apps
   const selectedCount = useMemo(() => selectedApps.size, [selectedApps]);
 
+  // Filtered apps based on search query - Smart Search Requirement 1.1, 7.3
+  const filteredApps = useMemo(() => {
+    return filterApps(apps, searchQuery);
+  }, [searchQuery]);
+
+  // Filtered categories based on search query - Smart Search Requirement 5.1
+  const filteredCategories = useMemo(() => {
+    return filterCategories(categories, apps, searchQuery);
+  }, [searchQuery]);
+
+  // Get filtered apps for a specific category - Smart Search Requirement 5.2
+  const getFilteredAppsByCategoryFn = useCallback((category: Category): AppData[] => {
+    return getFilteredAppsByCategory(apps, category, searchQuery);
+  }, [searchQuery]);
+
+  // Check if there are search results - Smart Search Requirement 6.1
+  const hasSearchResults = useMemo(() => {
+    return filteredApps.length > 0;
+  }, [filteredApps]);
+
   return {
     selectedOS,
     setSelectedOS,
@@ -272,6 +312,12 @@ export function usePackmateInit(): UsePackmateInitReturn {
     clearAll,
     selectedCount,
     isAppAvailable,
+    searchQuery,
+    setSearchQuery,
+    filteredApps,
+    filteredCategories,
+    getFilteredAppsByCategoryFn,
+    hasSearchResults,
     isHydrated,
   };
 }

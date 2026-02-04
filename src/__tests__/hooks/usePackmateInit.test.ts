@@ -501,3 +501,175 @@ describe('Unavailable Apps Cannot Be Selected', () => {
     );
   });
 });
+
+
+// Feature: smart-search
+// Unit tests for search integration in usePackmateInit hook
+// **Validates: Requirements 1.1, 5.1, 6.1**
+
+import { renderHook, act } from '@testing-library/react';
+import { usePackmateInit } from '@/hooks/usePackmateInit';
+import { categories } from '@/lib/data';
+
+describe('Search Integration in usePackmateInit', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  describe('searchQuery state', () => {
+    it('should initialize with empty search query', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      expect(result.current.searchQuery).toBe('');
+    });
+
+    it('should update searchQuery when setSearchQuery is called', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('firefox');
+      });
+      
+      expect(result.current.searchQuery).toBe('firefox');
+    });
+
+    it('should clear searchQuery when set to empty string', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('firefox');
+      });
+      expect(result.current.searchQuery).toBe('firefox');
+      
+      act(() => {
+        result.current.setSearchQuery('');
+      });
+      expect(result.current.searchQuery).toBe('');
+    });
+  });
+
+  describe('filteredApps', () => {
+    it('should return all apps when searchQuery is empty', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      expect(result.current.filteredApps.length).toBe(apps.length);
+    });
+
+    it('should filter apps when searchQuery changes', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('firefox');
+      });
+      
+      expect(result.current.filteredApps.length).toBeGreaterThan(0);
+      expect(result.current.filteredApps.length).toBeLessThan(apps.length);
+      
+      // All filtered apps should match the query
+      result.current.filteredApps.forEach(app => {
+        const matches = 
+          app.name.toLowerCase().includes('firefox') ||
+          app.description.toLowerCase().includes('firefox') ||
+          app.category.toLowerCase().includes('firefox');
+        expect(matches).toBe(true);
+      });
+    });
+
+    it('should return empty array when no apps match', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('xyznonexistent123456');
+      });
+      
+      expect(result.current.filteredApps).toEqual([]);
+    });
+  });
+
+  describe('filteredCategories', () => {
+    it('should return all categories when searchQuery is empty', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      expect(result.current.filteredCategories).toEqual(categories);
+    });
+
+    it('should filter categories when searchQuery changes', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('browser');
+      });
+      
+      expect(result.current.filteredCategories.length).toBeGreaterThan(0);
+      expect(result.current.filteredCategories.length).toBeLessThanOrEqual(categories.length);
+    });
+
+    it('should return empty array when no categories have matching apps', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('xyznonexistent123456');
+      });
+      
+      expect(result.current.filteredCategories).toEqual([]);
+    });
+  });
+
+  describe('getFilteredAppsByCategoryFn', () => {
+    it('should return all apps in category when searchQuery is empty', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      const category = categories[0];
+      
+      const categoryApps = result.current.getFilteredAppsByCategoryFn(category);
+      const expectedApps = apps.filter(app => app.category === category);
+      
+      expect(categoryApps).toEqual(expectedApps);
+    });
+
+    it('should return only matching apps in category when searchQuery is set', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('browser');
+      });
+      
+      const categoryApps = result.current.getFilteredAppsByCategoryFn('Web Browsers');
+      
+      categoryApps.forEach(app => {
+        expect(app.category).toBe('Web Browsers');
+        const matches = 
+          app.name.toLowerCase().includes('browser') ||
+          app.description.toLowerCase().includes('browser') ||
+          app.category.toLowerCase().includes('browser');
+        expect(matches).toBe(true);
+      });
+    });
+  });
+
+  describe('hasSearchResults', () => {
+    it('should be true when searchQuery is empty (all apps shown)', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      expect(result.current.hasSearchResults).toBe(true);
+    });
+
+    it('should be true when apps match the search query', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('firefox');
+      });
+      
+      expect(result.current.hasSearchResults).toBe(true);
+    });
+
+    it('should be false when no apps match the search query', () => {
+      const { result } = renderHook(() => usePackmateInit());
+      
+      act(() => {
+        result.current.setSearchQuery('xyznonexistent123456');
+      });
+      
+      expect(result.current.hasSearchResults).toBe(false);
+    });
+  });
+});
