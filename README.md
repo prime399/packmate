@@ -47,6 +47,20 @@
 
 ---
 
+## Demo
+
+<p align="center">
+  <a href="https://www.loom.com/share/9eca7dc62b3a4bce9a658c4cf9b8713f">
+    <img src="https://cdn.loom.com/sessions/thumbnails/9eca7dc62b3a4bce9a658c4cf9b8713f-ec08f2f2f2f8f0c5-full-play.gif" alt="Packmate Demo Video" width="600">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://www.loom.com/share/9eca7dc62b3a4bce9a658c4cf9b8713f">Watch the full demo on Loom</a>
+</p>
+
+---
+
 ## Overview
 
 Packmate is a web application that generates ready-to-run installation scripts for software packages across multiple operating systems and package managers. Users select applications from a curated catalog of 180+ apps across 15 categories, choose their preferred OS and package manager, and receive optimized shell commands for batch installation.
