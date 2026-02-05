@@ -8,6 +8,14 @@
   Cross-platform package installation script generator for Windows, macOS, and Linux
 </p>
 
+<h3 align="center">
+  <a href="https://packmate-taupe.vercel.app/">View Live Demo</a>
+</h3>
+
+<p align="center">
+  <a href="https://packmate-taupe.vercel.app/"><img src="https://img.shields.io/badge/Live_Demo-Visit_Site-0ea5e9?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo"></a>
+</p>
+
 <p align="center">
   <a href="#license"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
   <a href="#tech-stack"><img src="https://img.shields.io/badge/Next.js-16-black.svg" alt="Next.js 16"></a>
