@@ -31,7 +31,7 @@ exit 0
     '    Packmate - Cross-Platform App Installer',
     '.DESCRIPTION',
     '    PACKMATE - Cross-Platform App Installer',
-    '    https://github.com/prime/packmate',
+    '    https://github.com/prime399/packmate',
     '',
     '    Package Manager: Scoop',
     `    Packages: ${pkgCount}`,

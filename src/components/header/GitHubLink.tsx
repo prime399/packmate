@@ -5,7 +5,7 @@ import { Github } from 'lucide-react';
 export function GitHubLink() {
   return (
     <a
-      href="https://github.com/prime/packmate"
+      href="https://github.com/prime399/packmate"
       target="_blank"
       rel="noopener noreferrer"
       className="group p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-all duration-200 hover:translate-y-[-1px] hover:shadow-sm"

@@ -5,7 +5,7 @@ import { Heart } from 'lucide-react';
 export function ContributeLink() {
   return (
     <a
-      href="https://github.com/prime/packmate/blob/main/CONTRIBUTING.md"
+      href="https://github.com/prime399/packmate/blob/main/CONTRIBUTING.md"
       target="_blank"
       rel="noopener noreferrer"
       className="group flex items-center gap-1.5 text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all duration-200 hover:translate-y-[-1px]"
